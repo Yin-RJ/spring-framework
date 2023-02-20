@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -147,8 +148,8 @@ public class MockHttpServletRequestBuilder
 
 	private static URI initUri(String url, Object[] vars) {
 		Assert.notNull(url, "'url' must not be null");
-		Assert.isTrue(url.startsWith("/") || url.startsWith("http://") || url.startsWith("https://"), "" +
-				"'url' should start with a path or be a complete HTTP URL: " + url);
+		Assert.isTrue(url.startsWith("/") || url.startsWith("http://") || url.startsWith("https://"),
+				() -> "'url' should start with a path or be a complete HTTP URL: " + url);
 		return UriComponentsBuilder.fromUriString(url).buildAndExpand(vars).encode().toUri();
 	}
 
@@ -246,6 +247,17 @@ public class MockHttpServletRequestBuilder
 	/**
 	 * Set the character encoding of the request.
 	 * @param encoding the character encoding
+	 * @since 5.3.10
+	 * @see StandardCharsets
+	 * @see #characterEncoding(String)
+	 */
+	public MockHttpServletRequestBuilder characterEncoding(Charset encoding) {
+		return this.characterEncoding(encoding.name());
+	}
+
+	/**
+	 * Set the character encoding of the request.
+	 * @param encoding the character encoding
 	 */
 	public MockHttpServletRequestBuilder characterEncoding(String encoding) {
 		this.characterEncoding = encoding;
@@ -294,7 +306,7 @@ public class MockHttpServletRequestBuilder
 
 	/**
 	 * Set the 'Content-Type' header of the request as a raw String value,
-	 * possibly not even well formed (for testing purposes).
+	 * possibly not even well-formed (for testing purposes).
 	 * @param contentType the content type
 	 * @since 4.1.2
 	 */
@@ -315,8 +327,8 @@ public class MockHttpServletRequestBuilder
 	}
 
 	/**
-	 * Set the 'Accept' header using raw String values, possibly not even well
-	 * formed (for testing purposes).
+	 * Set the {@code Accept} header using raw String values, possibly not even
+	 * well-formed (for testing purposes).
 	 * @param mediaTypes one or more media types; internally joined as
 	 * comma-separated String
 	 */
@@ -396,7 +408,7 @@ public class MockHttpServletRequestBuilder
 
 	/**
 	 * Append to the query string and also add to the
-	 * {@link #params(MultiValueMap)}  request parameters} map. The parameter
+	 * {@link #params(MultiValueMap) request parameters} map. The parameter
 	 * name and value are encoded when they are added to the query string.
 	 * @param params the parameters to add
 	 * @since 5.2.2

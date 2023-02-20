@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ public class DefaultRequestToViewNameTranslator implements RequestToViewNameTran
 	}
 
 	/**
-	 * Set whether or not leading slashes should be stripped from the URI when
+	 * Set whether leading slashes should be stripped from the URI when
 	 * generating the view name. Default is "true".
 	 */
 	public void setStripLeadingSlash(boolean stripLeadingSlash) {
@@ -107,7 +107,7 @@ public class DefaultRequestToViewNameTranslator implements RequestToViewNameTran
 	}
 
 	/**
-	 * Set whether or not trailing slashes should be stripped from the URI when
+	 * Set whether trailing slashes should be stripped from the URI when
 	 * generating the view name. Default is "true".
 	 */
 	public void setStripTrailingSlash(boolean stripTrailingSlash) {
@@ -115,7 +115,7 @@ public class DefaultRequestToViewNameTranslator implements RequestToViewNameTran
 	}
 
 	/**
-	 * Set whether or not file extensions should be stripped from the URI when
+	 * Set whether file extensions should be stripped from the URI when
 	 * generating the view name. Default is "true".
 	 */
 	public void setStripExtension(boolean stripExtension) {
@@ -168,10 +168,10 @@ public class DefaultRequestToViewNameTranslator implements RequestToViewNameTran
 	/**
 	 * Translates the request URI of the incoming {@link HttpServletRequest}
 	 * into the view name based on the configured parameters.
-	 * @see ServletRequestPathUtils#getCachedPath(ServletRequest)
-	 * @see #transformPath
 	 * @throws IllegalArgumentException if neither a parsed RequestPath, nor a
 	 * String lookupPath have been resolved and cached as a request attribute.
+	 * @see ServletRequestPathUtils#getCachedPath(ServletRequest)
+	 * @see #transformPath
 	 */
 	@Override
 	public String getViewName(HttpServletRequest request) {

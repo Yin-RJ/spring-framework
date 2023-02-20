@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ public class ModelAndViewContainer {
 
 
 	/**
-	 * By default the content of the "default" model is used both during
+	 * By default, the content of the "default" model is used both during
 	 * rendering and redirect scenarios. Alternatively controller methods
 	 * can declare an argument of type {@code RedirectAttributes} and use
 	 * it to provide attributes to prepare the redirect URL.
@@ -115,7 +115,7 @@ public class ModelAndViewContainer {
 	}
 
 	/**
-	 * Return the View object, or {@code null} if we using a view name
+	 * Return the View object, or {@code null} if we are using a view name
 	 * to be resolved by the DispatcherServlet via a ViewResolver.
 	 */
 	@Nullable
@@ -333,7 +333,7 @@ public class ModelAndViewContainer {
 		StringBuilder sb = new StringBuilder("ModelAndViewContainer: ");
 		if (!isRequestHandled()) {
 			if (isViewReference()) {
-				sb.append("reference to view with name '").append(this.view).append("'");
+				sb.append("reference to view with name '").append(this.view).append('\'');
 			}
 			else {
 				sb.append("View is [").append(this.view).append(']');

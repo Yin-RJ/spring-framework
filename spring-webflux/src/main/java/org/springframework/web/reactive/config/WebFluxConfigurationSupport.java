@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,7 +155,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 	}
 
 	/**
-	 * Override to plug a sub-class of {@link RequestMappingHandlerMapping}.
+	 * Override to plug a subclass of {@link RequestMappingHandlerMapping}.
 	 */
 	protected RequestMappingHandlerMapping createRequestMappingHandlerMapping() {
 		return new RequestMappingHandlerMapping();
@@ -176,7 +176,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 
 	/**
 	 * Callback for building the global CORS configuration. This method is final.
-	 * Use {@link #addCorsMappings(CorsRegistry)} to customize the CORS conifg.
+	 * Use {@link #addCorsMappings(CorsRegistry)} to customize the CORS config.
 	 */
 	protected final Map<String, CorsConfiguration> getCorsConfigurations() {
 		if (this.corsConfigurations == null) {
@@ -188,7 +188,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 	}
 
 	/**
-	 * Override this method to configure cross origin requests processing.
+	 * Override this method to configure cross-origin requests processing.
 	 * @see CorsRegistry
 	 */
 	protected void addCorsMappings(CorsRegistry registry) {
@@ -222,7 +222,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 	}
 
 	/**
-	 * Override to plug a sub-class of {@link RouterFunctionMapping}.
+	 * Override to plug a subclass of {@link RouterFunctionMapping}.
 	 */
 	protected RouterFunctionMapping createRouterFunctionMapping() {
 		return new RouterFunctionMapping();
@@ -245,15 +245,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 
 		AbstractHandlerMapping handlerMapping = registry.getHandlerMapping();
 		if (handlerMapping != null) {
-			PathMatchConfigurer configurer = getPathMatchConfigurer();
-			Boolean useTrailingSlashMatch = configurer.isUseTrailingSlashMatch();
-			Boolean useCaseSensitiveMatch = configurer.isUseCaseSensitiveMatch();
-			if (useTrailingSlashMatch != null) {
-				handlerMapping.setUseTrailingSlashMatch(useTrailingSlashMatch);
-			}
-			if (useCaseSensitiveMatch != null) {
-				handlerMapping.setUseCaseSensitiveMatch(useCaseSensitiveMatch);
-			}
+			configureAbstractHandlerMapping(handlerMapping, getPathMatchConfigurer());
 		}
 		else {
 			handlerMapping = new EmptyHandlerMapping();
@@ -293,7 +285,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 	}
 
 	/**
-	 * Override to plug a sub-class of {@link RequestMappingHandlerAdapter}.
+	 * Override to plug a subclass of {@link RequestMappingHandlerAdapter}.
 	 */
 	protected RequestMappingHandlerAdapter createRequestMappingHandlerAdapter() {
 		return new RequestMappingHandlerAdapter();
@@ -318,7 +310,7 @@ public class WebFluxConfigurationSupport implements ApplicationContextAware {
 	}
 
 	/**
-	 * Override to plug a sub-class of {@link LocaleContextResolver}.
+	 * Override to plug a subclass of {@link LocaleContextResolver}.
 	 */
 	protected LocaleContextResolver createLocaleContextResolver() {
 		return new AcceptHeaderLocaleContextResolver();

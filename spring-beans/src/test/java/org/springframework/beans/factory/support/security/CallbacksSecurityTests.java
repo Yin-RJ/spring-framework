@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.testfixture.security.TestPrincipal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
@@ -303,14 +304,14 @@ public class CallbacksSecurityTests {
 		Method method = bean.getClass().getMethod("destroy");
 		method.setAccessible(true);
 
-		assertThatExceptionOfType(Exception.class).isThrownBy(() ->
+		assertThatException().isThrownBy(() ->
 				AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
 						method.invoke(bean);
 						return null;
 					}, acc));
 
 		Class<ConstructorBean> cl = ConstructorBean.class;
-		assertThatExceptionOfType(Exception.class).isThrownBy(() ->
+		assertThatException().isThrownBy(() ->
 				AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () ->
 						cl.newInstance(), acc));
 	}
@@ -449,7 +450,7 @@ public class CallbacksSecurityTests {
 			public Object run() {
 				// sanity check
 				assertThat(getCurrentSubjectName()).isEqualTo("user1");
-				assertThat(NonPrivilegedBean.destroyed).isEqualTo(false);
+				assertThat(NonPrivilegedBean.destroyed).isFalse();
 
 				beanFactory.getBean("trusted-spring-callbacks");
 				beanFactory.getBean("trusted-custom-init-destroy");
@@ -465,7 +466,7 @@ public class CallbacksSecurityTests {
 				beanFactory.getBean("trusted-working-property-injection");
 
 				beanFactory.destroySingletons();
-				assertThat(NonPrivilegedBean.destroyed).isEqualTo(true);
+				assertThat(NonPrivilegedBean.destroyed).isTrue();
 				return null;
 			}
 		}, provider.getAccessControlContext());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletMapping;
 import javax.servlet.http.HttpServletRequest;
@@ -61,7 +62,7 @@ public class UrlPathHelper {
 	 */
 	public static final String PATH_ATTRIBUTE = UrlPathHelper.class.getName() + ".PATH";
 
-	private static final boolean servlet4Present =
+	static final boolean servlet4Present =
 			ClassUtils.hasMethod(HttpServletRequest.class, "getHttpServletMapping");
 
 	/**
@@ -146,7 +147,6 @@ public class UrlPathHelper {
 	 * Whether configured to remove ";" (semicolon) content from the request URI.
 	 */
 	public boolean shouldRemoveSemicolonContent() {
-		checkReadOnly();
 		return this.removeSemicolonContent;
 	}
 
@@ -189,7 +189,7 @@ public class UrlPathHelper {
 
 	/**
 	 * {@link #getLookupPathForRequest Resolve} the lookupPath and cache it in a
-	 * a request attribute with the key {@link #PATH_ATTRIBUTE} for subsequent
+	 * request attribute with the key {@link #PATH_ATTRIBUTE} for subsequent
 	 * access via {@link #getResolvedLookupPath(ServletRequest)}.
 	 * @param request the current request
 	 * @return the resolved path
@@ -205,12 +205,12 @@ public class UrlPathHelper {
 	 * Return a previously {@link #getLookupPathForRequest resolved} lookupPath.
 	 * @param request the current request
 	 * @return the previously resolved lookupPath
-	 * @throws IllegalArgumentException if the not found
+	 * @throws IllegalArgumentException if the lookup path is not found
 	 * @since 5.3
 	 */
 	public static String getResolvedLookupPath(ServletRequest request) {
 		String lookupPath = (String) request.getAttribute(PATH_ATTRIBUTE);
-		Assert.notNull(lookupPath, "Expected lookupPath in request attribute \"" + PATH_ATTRIBUTE + "\".");
+		Assert.notNull(lookupPath, () -> "Expected lookupPath in request attribute \"" + PATH_ATTRIBUTE + "\".");
 		return lookupPath;
 	}
 
@@ -290,11 +290,11 @@ public class UrlPathHelper {
 	 * i.e. the part of the request's URL beyond the part that called the servlet,
 	 * or "" if the whole URL has been used to identify the servlet.
 	 * <p>Detects include request URL if called within a RequestDispatcher include.
-	 * <p>E.g.: servlet mapping = "/*"; request URI = "/test/a" -> "/test/a".
-	 * <p>E.g.: servlet mapping = "/"; request URI = "/test/a" -> "/test/a".
-	 * <p>E.g.: servlet mapping = "/test/*"; request URI = "/test/a" -> "/a".
-	 * <p>E.g.: servlet mapping = "/test"; request URI = "/test" -> "".
-	 * <p>E.g.: servlet mapping = "/*.test"; request URI = "/a.test" -> "".
+	 * <p>E.g.: servlet mapping = "/*"; request URI = "/test/a" &rarr; "/test/a".
+	 * <p>E.g.: servlet mapping = "/"; request URI = "/test/a" &rarr; "/test/a".
+	 * <p>E.g.: servlet mapping = "/test/*"; request URI = "/test/a" &rarr; "/a".
+	 * <p>E.g.: servlet mapping = "/test"; request URI = "/test" &rarr; "".
+	 * <p>E.g.: servlet mapping = "/*.test"; request URI = "/a.test" &rarr; "".
 	 * @param request current HTTP request
 	 * @param pathWithinApp a precomputed path within the application
 	 * @return the path within the servlet mapping, or ""
@@ -405,16 +405,18 @@ public class UrlPathHelper {
 	 * </ul>
 	 */
 	private static String getSanitizedPath(final String path) {
-		int index = path.indexOf("//");
-		if (index >= 0) {
-			StringBuilder sanitized = new StringBuilder(path);
-			while (index != -1) {
-				sanitized.deleteCharAt(index);
-				index = sanitized.indexOf("//", index);
-			}
-			return sanitized.toString();
+		int start = path.indexOf("//");
+		if (start == -1) {
+			return path;
 		}
-		return path;
+		char[] content = path.toCharArray();
+		int slowIndex = start;
+		for (int fastIndex = start + 1; fastIndex < content.length; fastIndex++) {
+			if (content[fastIndex] != '/' || content[slowIndex] != '/') {
+				content[++slowIndex] = content[fastIndex];
+			}
+		}
+		return new String(content, 0, slowIndex + 1);
 	}
 
 	/**
@@ -532,7 +534,7 @@ public class UrlPathHelper {
 	 */
 	public String getOriginatingQueryString(HttpServletRequest request) {
 		if ((request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE) != null) ||
-			(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE) != null)) {
+				(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE) != null)) {
 			return (String) request.getAttribute(WebUtils.FORWARD_QUERY_STRING_ATTRIBUTE);
 		}
 		else {
@@ -576,8 +578,8 @@ public class UrlPathHelper {
 			return UriUtils.decode(source, enc);
 		}
 		catch (UnsupportedCharsetException ex) {
-			if (logger.isWarnEnabled()) {
-				logger.warn("Could not decode request string [" + source + "] with encoding '" + enc +
+			if (logger.isDebugEnabled()) {
+				logger.debug("Could not decode request string [" + source + "] with encoding '" + enc +
 						"': falling back to platform default encoding; exception message: " + ex.getMessage());
 			}
 			return URLDecoder.decode(source);
@@ -774,7 +776,10 @@ public class UrlPathHelper {
 	private static class Servlet4Delegate {
 
 		public static boolean skipServletPathDetermination(HttpServletRequest request) {
-			HttpServletMapping mapping = request.getHttpServletMapping();
+			HttpServletMapping mapping = (HttpServletMapping) request.getAttribute(RequestDispatcher.INCLUDE_MAPPING);
+			if (mapping == null) {
+				mapping = request.getHttpServletMapping();
+			}
 			MappingMatch match = mapping.getMappingMatch();
 			return (match != null && (!match.equals(MappingMatch.PATH) || mapping.getPattern().equals("/*")));
 		}

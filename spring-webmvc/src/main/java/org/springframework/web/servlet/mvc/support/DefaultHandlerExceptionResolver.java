@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,6 @@ import org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver;
  * <p>This exception resolver is enabled by default in the common Spring
  * {@link org.springframework.web.servlet.DispatcherServlet}.
  *
- * <p>
  * <table>
  * <caption>Supported Exceptions</caption>
  * <thead>
@@ -278,17 +277,20 @@ public class DefaultHandlerExceptionResolver extends AbstractHandlerExceptionRes
 	protected ModelAndView handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex,
 			HttpServletRequest request, HttpServletResponse response, @Nullable Object handler) throws IOException {
 
-		response.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
 		List<MediaType> mediaTypes = ex.getSupportedMediaTypes();
 		if (!CollectionUtils.isEmpty(mediaTypes)) {
 			response.setHeader("Accept", MediaType.toString(mediaTypes));
+			if (request.getMethod().equals("PATCH")) {
+				response.setHeader("Accept-Patch", MediaType.toString(mediaTypes));
+			}
 		}
+		response.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
 		return new ModelAndView();
 	}
 
 	/**
 	 * Handle the case where no {@linkplain org.springframework.http.converter.HttpMessageConverter message converters}
-	 * were found that were acceptable for the client (expressed via the {@code Accept} header.
+	 * were found that were acceptable for the client (expressed via the {@code Accept} header).
 	 * <p>The default implementation sends an HTTP 406 error and returns an empty {@code ModelAndView}.
 	 * Alternatively, a fallback view could be chosen, or the HttpMediaTypeNotAcceptableException
 	 * could be rethrown as-is.
@@ -518,7 +520,7 @@ public class DefaultHandlerExceptionResolver extends AbstractHandlerExceptionRes
 	/**
 	 * Handle the case where an async request timed out.
 	 * <p>The default implementation sends an HTTP 503 error.
-	 * @param ex the {@link AsyncRequestTimeoutException }to be handled
+	 * @param ex the {@link AsyncRequestTimeoutException} to be handled
 	 * @param request current HTTP request
 	 * @param response current HTTP response
 	 * @param handler the executed handler, or {@code null} if none chosen

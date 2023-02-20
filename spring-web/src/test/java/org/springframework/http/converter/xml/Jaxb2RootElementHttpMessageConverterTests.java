@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xmlunit.diff.DifferenceEvaluator;
 
@@ -55,75 +54,67 @@ import static org.xmlunit.diff.DifferenceEvaluators.downgradeDifferencesToEqual;
  * @author Arjen Poutsma
  * @author Sebastien Deleuze
  * @author Rossen Stoyanchev
+ * @author Sam Brannen
  */
-public class Jaxb2RootElementHttpMessageConverterTests {
+class Jaxb2RootElementHttpMessageConverterTests {
 
-	private Jaxb2RootElementHttpMessageConverter converter;
+	private final Jaxb2RootElementHttpMessageConverter converter = new Jaxb2RootElementHttpMessageConverter();
 
-	private RootElement rootElement;
-
-	private RootElement rootElementCglib;
-
-
-	@BeforeEach
-	public void setup() {
-		converter = new Jaxb2RootElementHttpMessageConverter();
-		rootElement = new RootElement();
-		DefaultAopProxyFactory proxyFactory = new DefaultAopProxyFactory();
-		AdvisedSupport advisedSupport = new AdvisedSupport();
-		advisedSupport.setTarget(rootElement);
-		advisedSupport.setProxyTargetClass(true);
-		AopProxy proxy = proxyFactory.createAopProxy(advisedSupport);
-		rootElementCglib = (RootElement) proxy.getProxy();
-	}
+	private final RootElement rootElement = new RootElement();
 
 
 	@Test
-	public void canRead() {
-		assertThat(converter.canRead(RootElement.class, null)).as("Converter does not support reading @XmlRootElement").isTrue();
-		assertThat(converter.canRead(Type.class, null)).as("Converter does not support reading @XmlType").isTrue();
+	void canRead() {
+		assertThat(converter.canRead(RootElement.class, null))
+				.as("Converter does not support reading @XmlRootElement").isTrue();
+		assertThat(converter.canRead(Type.class, null))
+				.as("Converter does not support reading @XmlType").isTrue();
 	}
 
 	@Test
-	public void canWrite() {
-		assertThat(converter.canWrite(RootElement.class, null)).as("Converter does not support writing @XmlRootElement").isTrue();
-		assertThat(converter.canWrite(RootElementSubclass.class, null)).as("Converter does not support writing @XmlRootElement subclass").isTrue();
-		assertThat(converter.canWrite(rootElementCglib.getClass(), null)).as("Converter does not support writing @XmlRootElement subclass").isTrue();
-		assertThat(converter.canWrite(Type.class, null)).as("Converter supports writing @XmlType").isFalse();
+	void canWrite() {
+		assertThat(converter.canWrite(RootElement.class, null))
+				.as("Converter does not support writing @XmlRootElement").isTrue();
+		assertThat(converter.canWrite(RootElementSubclass.class, null))
+				.as("Converter does not support writing @XmlRootElement subclass").isTrue();
+		assertThat(converter.canWrite(createRootElementCglib().getClass(), null))
+				.as("Converter does not support writing @XmlRootElement subclass").isTrue();
+		assertThat(converter.canWrite(Type.class, null))
+				.as("Converter supports writing @XmlType").isFalse();
 	}
 
 	@Test
-	public void readXmlRootElement() throws Exception {
-		byte[] body = "<rootElement><type s=\"Hello World\"/></rootElement>".getBytes("UTF-8");
+	void readXmlRootElement() throws Exception {
+		byte[] body = "<rootElement><type s=\"Hello World\"/></rootElement>".getBytes(StandardCharsets.UTF_8);
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body);
 		RootElement result = (RootElement) converter.read(RootElement.class, inputMessage);
 		assertThat(result.type.s).as("Invalid result").isEqualTo("Hello World");
 	}
 
 	@Test
-	public void readXmlRootElementSubclass() throws Exception {
-		byte[] body = "<rootElement><type s=\"Hello World\"/></rootElement>".getBytes("UTF-8");
+	void readXmlRootElementSubclass() throws Exception {
+		byte[] body = "<rootElement><type s=\"Hello World\"/></rootElement>".getBytes(StandardCharsets.UTF_8);
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body);
 		RootElementSubclass result = (RootElementSubclass) converter.read(RootElementSubclass.class, inputMessage);
 		assertThat(result.getType().s).as("Invalid result").isEqualTo("Hello World");
 	}
 
 	@Test
-	public void readXmlType() throws Exception {
-		byte[] body = "<foo s=\"Hello World\"/>".getBytes("UTF-8");
+	void readXmlType() throws Exception {
+		byte[] body = "<foo s=\"Hello World\"/>".getBytes(StandardCharsets.UTF_8);
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body);
 		Type result = (Type) converter.read(Type.class, inputMessage);
 		assertThat(result.s).as("Invalid result").isEqualTo("Hello World");
 	}
 
 	@Test
-	public void readXmlRootElementExternalEntityDisabled() throws Exception {
+	void readXmlRootElementExternalEntityDisabled() throws Exception {
 		Resource external = new ClassPathResource("external.txt", getClass());
 		String content =  "<!DOCTYPE root SYSTEM \"https://192.168.28.42/1.jsp\" [" +
 				"  <!ELEMENT external ANY >\n" +
 				"  <!ENTITY ext SYSTEM \"" + external.getURI() + "\" >]>" +
 				"  <rootElement><external>&ext;</external></rootElement>";
-		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes("UTF-8"));
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes(StandardCharsets.UTF_8));
 		converter.setSupportDtd(true);
 		RootElement rootElement = (RootElement) converter.read(RootElement.class, inputMessage);
 
@@ -131,13 +122,13 @@ public class Jaxb2RootElementHttpMessageConverterTests {
 	}
 
 	@Test
-	public void readXmlRootElementExternalEntityEnabled() throws Exception {
+	void readXmlRootElementExternalEntityEnabled() throws Exception {
 		Resource external = new ClassPathResource("external.txt", getClass());
 		String content =  "<!DOCTYPE root [" +
 				"  <!ELEMENT external ANY >\n" +
 				"  <!ENTITY ext SYSTEM \"" + external.getURI() + "\" >]>" +
 				"  <rootElement><external>&ext;</external></rootElement>";
-		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes("UTF-8"));
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes(StandardCharsets.UTF_8));
 		this.converter.setProcessExternalEntities(true);
 		RootElement rootElement = (RootElement) converter.read(RootElement.class, inputMessage);
 
@@ -145,7 +136,7 @@ public class Jaxb2RootElementHttpMessageConverterTests {
 	}
 
 	@Test
-	public void testXmlBomb() throws Exception {
+	void testXmlBomb() throws Exception {
 		// https://en.wikipedia.org/wiki/Billion_laughs
 		// https://msdn.microsoft.com/en-us/magazine/ee335713.aspx
 		String content = "<?xml version=\"1.0\"?>\n" +
@@ -163,27 +154,29 @@ public class Jaxb2RootElementHttpMessageConverterTests {
 				" <!ENTITY lol9 \"&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;\">\n" +
 				"]>\n" +
 				"<rootElement><external>&lol9;</external></rootElement>";
-		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes("UTF-8"));
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes(StandardCharsets.UTF_8));
 		assertThatExceptionOfType(HttpMessageNotReadableException.class).isThrownBy(() ->
 				this.converter.read(RootElement.class, inputMessage))
 			.withMessageContaining("DOCTYPE");
 	}
 
 	@Test
-	public void writeXmlRootElement() throws Exception {
+	void writeXmlRootElement() throws Exception {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		converter.write(rootElement, null, outputMessage);
-		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content-type").isEqualTo(new MediaType("application", "xml"));
+		assertThat(outputMessage.getHeaders().getContentType())
+				.as("Invalid content-type").isEqualTo(MediaType.APPLICATION_XML);
 		DifferenceEvaluator ev = chain(Default, downgradeDifferencesToEqual(XML_STANDALONE));
 		assertThat(XmlContent.of(outputMessage.getBodyAsString(StandardCharsets.UTF_8)))
 			.isSimilarTo("<rootElement><type s=\"Hello World\"/></rootElement>", ev);
 	}
 
 	@Test
-	public void writeXmlRootElementSubclass() throws Exception {
+	void writeXmlRootElementSubclass() throws Exception {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
-		converter.write(rootElementCglib, null, outputMessage);
-		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content-type").isEqualTo(new MediaType("application", "xml"));
+		converter.write(createRootElementCglib(), null, outputMessage);
+		assertThat(outputMessage.getHeaders().getContentType())
+				.as("Invalid content-type").isEqualTo(MediaType.APPLICATION_XML);
 		DifferenceEvaluator ev = chain(Default, downgradeDifferencesToEqual(XML_STANDALONE));
 		assertThat(XmlContent.of(outputMessage.getBodyAsString(StandardCharsets.UTF_8)))
 				.isSimilarTo("<rootElement><type s=\"Hello World\"/></rootElement>", ev);
@@ -192,7 +185,7 @@ public class Jaxb2RootElementHttpMessageConverterTests {
 	// SPR-11488
 
 	@Test
-	public void customizeMarshaller() throws Exception {
+	void customizeMarshaller() throws Exception {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		MyJaxb2RootElementHttpMessageConverter myConverter = new MyJaxb2RootElementHttpMessageConverter();
 		myConverter.write(new MyRootElement(new MyCustomElement("a", "b")), null, outputMessage);
@@ -202,13 +195,22 @@ public class Jaxb2RootElementHttpMessageConverterTests {
 	}
 
 	@Test
-	public void customizeUnmarshaller() throws Exception {
-		byte[] body = "<myRootElement><element>a|||b</element></myRootElement>".getBytes("UTF-8");
+	void customizeUnmarshaller() throws Exception {
+		byte[] body = "<myRootElement><element>a|||b</element></myRootElement>".getBytes(StandardCharsets.UTF_8);
 		MyJaxb2RootElementHttpMessageConverter myConverter = new MyJaxb2RootElementHttpMessageConverter();
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body);
 		MyRootElement result = (MyRootElement) myConverter.read(MyRootElement.class, inputMessage);
 		assertThat(result.getElement().getField1()).isEqualTo("a");
 		assertThat(result.getElement().getField2()).isEqualTo("b");
+	}
+
+	private RootElement createRootElementCglib() {
+		DefaultAopProxyFactory proxyFactory = new DefaultAopProxyFactory();
+		AdvisedSupport advisedSupport = new AdvisedSupport();
+		advisedSupport.setTarget(this.rootElement);
+		advisedSupport.setProxyTargetClass(true);
+		AopProxy proxy = proxyFactory.createAopProxy(advisedSupport);
+		return (RootElement) proxy.getProxy();
 	}
 
 

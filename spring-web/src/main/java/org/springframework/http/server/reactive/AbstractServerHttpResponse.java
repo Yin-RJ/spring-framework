@@ -18,6 +18,7 @@ package org.springframework.http.server.reactive;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -211,10 +212,29 @@ public abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 		// We must resolve value first however, for a chance to handle potential error.
 		if (body instanceof Mono) {
 			return ((Mono<? extends DataBuffer>) body)
-					.flatMap(buffer -> doCommit(() ->
-							writeWithInternal(Mono.fromCallable(() -> buffer)
-									.doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release))))
-					.doOnError(t -> getHeaders().clearContentHeaders());
+					.flatMap(buffer -> {
+						touchDataBuffer(buffer);
+						AtomicBoolean subscribed = new AtomicBoolean();
+						return doCommit(
+								() -> {
+									try {
+										return writeWithInternal(Mono.fromCallable(() -> buffer)
+												.doOnSubscribe(s -> subscribed.set(true))
+												.doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release));
+									}
+									catch (Throwable ex) {
+										return Mono.error(ex);
+									}
+								})
+								.doOnError(ex -> DataBufferUtils.release(buffer))
+								.doOnCancel(() -> {
+									if (!subscribed.get()) {
+										DataBufferUtils.release(buffer);
+									}
+								});
+					})
+					.doOnError(t -> getHeaders().clearContentHeaders())
+					.doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release);
 		}
 		else {
 			return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeWithInternal(inner)))
@@ -234,7 +254,7 @@ public abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 	}
 
 	/**
-	 * A variant of {@link #doCommit(Supplier)} for a response without no body.
+	 * A variant of {@link #doCommit(Supplier)} for a response without a body.
 	 * @return a completion publisher
 	 */
 	protected Mono<Void> doCommit() {
@@ -300,9 +320,9 @@ public abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 	protected abstract void applyStatusCode();
 
 	/**
-	 * Invoked when the response is getting committed allowing sub-classes to
+	 * Invoked when the response is getting committed allowing subclasses to
 	 * make apply header values to the underlying response.
-	 * <p>Note that most sub-classes use an {@link HttpHeaders} instance that
+	 * <p>Note that most subclasses use an {@link HttpHeaders} instance that
 	 * wraps an adapter to the native response headers such that changes are
 	 * propagated to the underlying response on the go. That means this callback
 	 * is typically not used other than for specialized updates such as setting
@@ -315,5 +335,14 @@ public abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 	 * This method is called once only.
 	 */
 	protected abstract void applyCookies();
+
+	/**
+	 * Allow subclasses to associate a hint with the data buffer if it is a
+	 * pooled buffer and supports leak tracking.
+	 * @param buffer the buffer to attach a hint to
+	 * @since 5.3.2
+	 */
+	protected void touchDataBuffer(DataBuffer buffer) {
+	}
 
 }

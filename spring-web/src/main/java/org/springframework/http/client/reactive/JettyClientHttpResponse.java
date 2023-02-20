@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,8 +58,11 @@ class JettyClientHttpResponse implements ClientHttpResponse {
 		this.reactiveResponse = reactiveResponse;
 		this.content = Flux.from(content);
 
-		MultiValueMap<String, String> adapter = new JettyHeadersAdapter(reactiveResponse.getHeaders());
-		this.headers = HttpHeaders.readOnlyHttpHeaders(adapter);
+		MultiValueMap<String, String> headers = (Jetty10HttpFieldsHelper.jetty10Present() ?
+				Jetty10HttpFieldsHelper.getHttpHeaders(reactiveResponse.getResponse()) :
+				new JettyHeadersAdapter(reactiveResponse.getHeaders()));
+
+		this.headers = HttpHeaders.readOnlyHttpHeaders(headers);
 	}
 
 

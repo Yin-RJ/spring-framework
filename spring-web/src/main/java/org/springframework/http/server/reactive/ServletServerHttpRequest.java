@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,9 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 
 	private final byte[] buffer;
 
+	private final AsyncListener asyncListener;
+
+
 	public ServletServerHttpRequest(HttpServletRequest request, AsyncContext asyncContext,
 			String servletPath, DataBufferFactory bufferFactory, int bufferSize)
 			throws IOException, URISyntaxException {
@@ -87,13 +90,13 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 		super(initUri(request), request.getContextPath() + servletPath, initHeaders(headers, request));
 
 		Assert.notNull(bufferFactory, "'bufferFactory' must not be null");
-		Assert.isTrue(bufferSize > 0, "'bufferSize' must be higher than 0");
+		Assert.isTrue(bufferSize > 0, "'bufferSize' must be greater than 0");
 
 		this.request = request;
 		this.bufferFactory = bufferFactory;
 		this.buffer = new byte[bufferSize];
 
-		asyncContext.addListener(new RequestAsyncListener());
+		this.asyncListener = new RequestAsyncListener();
 
 		// Tomcat expects ReadListener registration on initial thread
 		ServletInputStream inputStream = request.getInputStream();
@@ -195,7 +198,7 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 	@Nullable
 	protected SslInfo initSslInfo() {
 		X509Certificate[] certificates = getX509Certificates();
-		return certificates != null ? new DefaultSslInfo(getSslSessionId(), certificates) : null;
+		return (certificates != null ? new DefaultSslInfo(getSslSessionId(), certificates) : null);
 	}
 
 	@Nullable
@@ -205,8 +208,7 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 
 	@Nullable
 	private X509Certificate[] getX509Certificates() {
-		String name = "javax.servlet.request.X509Certificate";
-		return (X509Certificate[]) this.request.getAttribute(name);
+		return (X509Certificate[]) this.request.getAttribute("javax.servlet.request.X509Certificate");
 	}
 
 	@Override
@@ -214,13 +216,29 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 		return Flux.from(this.bodyPublisher);
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> T getNativeRequest() {
+		return (T) this.request;
+	}
+
+	/**
+	 * Return an {@link RequestAsyncListener} that completes the request body
+	 * Publisher when the Servlet container notifies that request input has ended.
+	 * The listener is not actually registered but is rather exposed for
+	 * {@link ServletHttpHandlerAdapter} to ensure events are delegated.
+	 */
+	AsyncListener getAsyncListener() {
+		return this.asyncListener;
+	}
+
 	/**
 	 * Read from the request body InputStream and return a DataBuffer.
 	 * Invoked only when {@link ServletInputStream#isReady()} returns "true".
-	 * @return a DataBuffer with data read, or {@link #EOF_BUFFER} if the input
-	 * stream returned -1, or null if 0 bytes were read.
+	 * @return a DataBuffer with data read, or
+	 * {@link AbstractListenerReadPublisher#EMPTY_BUFFER} if 0 bytes were read,
+	 * or {@link #EOF_BUFFER} if the input stream returned -1.
 	 */
-	@Nullable
 	DataBuffer readFromInputStream() throws IOException {
 		int read = this.request.getInputStream().read(this.buffer);
 		logBytesRead(read);
@@ -235,7 +253,7 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 			return EOF_BUFFER;
 		}
 
-		return null;
+		return AbstractListenerReadPublisher.EMPTY_BUFFER;
 	}
 
 	protected final void logBytesRead(int read) {
@@ -243,12 +261,6 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 		if (rsReadLogger.isTraceEnabled()) {
 			rsReadLogger.trace(getLogPrefix() + "Read " + read + (read != -1 ? " bytes" : ""));
 		}
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public <T> T getNativeRequest() {
-		return (T) this.request;
 	}
 
 

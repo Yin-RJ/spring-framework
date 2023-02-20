@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,12 +63,12 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 			HttpServerExchange exchange, DataBufferFactory bufferFactory, UndertowServerHttpRequest request) {
 
 		super(bufferFactory, createHeaders(exchange));
-		Assert.notNull(exchange, "HttpServerExchange must not be null");
 		this.exchange = exchange;
 		this.request = request;
 	}
 
 	private static HttpHeaders createHeaders(HttpServerExchange exchange) {
+		Assert.notNull(exchange, "HttpServerExchange must not be null");
 		UndertowHeadersAdapter headersMap = new UndertowHeadersAdapter(exchange.getResponseHeaders());
 		return new HttpHeaders(headersMap);
 	}
@@ -198,7 +198,7 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 				return false;
 			}
 
-			// Track write listener calls from here on..
+			// Track write listener calls from here on.
 			this.writePossible = false;
 
 			// In case of IOException, onError handling should call discardData(DataBuffer)..
@@ -212,7 +212,7 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 				return false;
 			}
 
-			// We wrote all, so can still write more..
+			// We wrote all, so can still write more.
 			this.writePossible = true;
 
 			DataBufferUtils.release(dataBuffer);
@@ -284,16 +284,10 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 		}
 
 		@Override
-		protected void flushingFailed(Throwable t) {
-			cancel();
-			onError(t);
-		}
-
-		@Override
 		protected boolean isWritePossible() {
 			StreamSinkChannel channel = UndertowServerHttpResponse.this.responseChannel;
 			if (channel != null) {
-				// We can always call flush, just ensure writes are on..
+				// We can always call flush, just ensure writes are on.
 				channel.resumeWrites();
 				return true;
 			}

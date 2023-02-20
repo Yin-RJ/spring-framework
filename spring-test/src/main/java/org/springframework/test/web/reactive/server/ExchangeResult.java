@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import reactor.core.publisher.Mono;
 
 import org.springframework.http.HttpHeaders;
@@ -42,17 +44,20 @@ import org.springframework.util.MultiValueMap;
  * {@link WebTestClient}.
  *
  * <p>Note that a decoded response body is not exposed at this level since the
- * body may not have been decoded and consumed yet. Sub-types
+ * body may not have been decoded and consumed yet. Subtypes
  * {@link EntityExchangeResult} and {@link FluxExchangeResult} provide access
  * to a decoded response entity and a decoded (but not consumed) response body
  * respectively.
  *
  * @author Rossen Stoyanchev
+ * @author Sam Brannen
  * @since 5.0
  * @see EntityExchangeResult
  * @see FluxExchangeResult
  */
 public class ExchangeResult {
+
+	private static final Log logger = LogFactory.getLog(ExchangeResult.class);
 
 	private static final List<MediaType> PRINTABLE_MEDIA_TYPES = Arrays.asList(
 			MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML,
@@ -73,7 +78,10 @@ public class ExchangeResult {
 	private final String uriTemplate;
 
 	@Nullable
-	final Object mockServerResult;
+	private final Object mockServerResult;
+
+	/** Ensure single logging, e.g. for expectAll. */
+	private boolean diagnosticsLogged;
 
 
 	/**
@@ -117,6 +125,7 @@ public class ExchangeResult {
 		this.timeout = other.timeout;
 		this.uriTemplate = other.uriTemplate;
 		this.mockServerResult = other.mockServerResult;
+		this.diagnosticsLogged = other.diagnosticsLogged;
 	}
 
 
@@ -153,7 +162,7 @@ public class ExchangeResult {
 	 * Return the raw request body content written through the request.
 	 * <p><strong>Note:</strong> If the request content has not been consumed
 	 * for any reason yet, use of this method will trigger consumption.
-	 * @throws IllegalStateException if the request body is not been fully written.
+	 * @throws IllegalStateException if the request body has not been fully written.
 	 */
 	@Nullable
 	public byte[] getRequestBodyContent() {
@@ -163,6 +172,8 @@ public class ExchangeResult {
 
 	/**
 	 * Return the HTTP status code as an {@link HttpStatus} enum value.
+	 * @throws IllegalArgumentException in case of an unknown HTTP status code
+	 * @see #getRawStatusCode()
 	 */
 	public HttpStatus getStatus() {
 		return this.response.getStatusCode();
@@ -195,7 +206,7 @@ public class ExchangeResult {
 	 * Return the raw request body content written to the response.
 	 * <p><strong>Note:</strong> If the response content has not been consumed
 	 * yet, use of this method will trigger consumption.
-	 * @throws IllegalStateException if the response is not been fully read.
+	 * @throws IllegalStateException if the response has not been fully read.
 	 */
 	@Nullable
 	public byte[] getResponseBodyContent() {
@@ -214,16 +225,20 @@ public class ExchangeResult {
 	}
 
 	/**
-	 * Execute the given Runnable, catch any {@link AssertionError}, decorate
-	 * with {@code AssertionError} containing diagnostic information about the
-	 * request and response, and then re-throw.
+	 * Execute the given Runnable, catch any {@link AssertionError}, log details
+	 * about the request and response at ERROR level under the class log
+	 * category, and after that re-throw the error.
 	 */
 	public void assertWithDiagnostics(Runnable assertion) {
 		try {
 			assertion.run();
 		}
 		catch (AssertionError ex) {
-			throw new AssertionError(ex.getMessage() + "\n" + this, ex);
+			if (!this.diagnosticsLogged && logger.isErrorEnabled()) {
+				this.diagnosticsLogged = true;
+				logger.error("Request details for assertion failure:\n" + this);
+			}
+			throw ex;
 		}
 	}
 
@@ -236,11 +251,20 @@ public class ExchangeResult {
 				"\n" +
 				formatBody(getRequestHeaders().getContentType(), this.requestBody) + "\n" +
 				"\n" +
-				"< " + getStatus() + " " + getStatus().getReasonPhrase() + "\n" +
+				"< " + formatStatus() + "\n" +
 				"< " + formatHeaders(getResponseHeaders(), "\n< ") + "\n" +
 				"\n" +
 				formatBody(getResponseHeaders().getContentType(), this.responseBody) +"\n" +
 				formatMockServerResult();
+	}
+
+	private String formatStatus() {
+		try {
+			return getStatus() + " " + getStatus().getReasonPhrase();
+		}
+		catch (Exception ex) {
+			return Integer.toString(getRawStatusCode());
+		}
 	}
 
 	private String formatHeaders(HttpHeaders headers, String delimiter) {

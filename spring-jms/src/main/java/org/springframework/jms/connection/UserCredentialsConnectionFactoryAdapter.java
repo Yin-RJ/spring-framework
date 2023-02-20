@@ -55,7 +55,7 @@ import org.springframework.util.StringUtils;
  *   &lt;property name="targetConnectionFactory" ref="myTargetConnectionFactory"/&gt;
  *   &lt;property name="username" value="myusername"/&gt;
  *   &lt;property name="password" value="mypassword"/&gt;
- * &lt;/bean></pre>
+ * &lt;/bean&gt;</pre>
  *
  * <p>If the "username" is empty, this proxy will simply delegate to the standard
  * {@code createConnection()} method of the target ConnectionFactory.
@@ -123,7 +123,7 @@ public class UserCredentialsConnectionFactoryAdapter
 
 
 	/**
-	 * Set user credententials for this proxy and the current thread.
+	 * Set user credentials for this proxy and the current thread.
 	 * The given username and password will be applied to all subsequent
 	 * {@code createConnection()} calls on this ConnectionFactory proxy.
 	 * <p>This will override any statically specified user credentials,

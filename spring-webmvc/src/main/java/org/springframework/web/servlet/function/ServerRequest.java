@@ -85,7 +85,6 @@ public interface ServerRequest {
 	/**
 	 * Get a {@code UriBuilderComponents} from the URI associated with this
 	 * {@code ServerRequest}.
-	 *
 	 * @return a URI builder
 	 */
 	UriBuilder uriBuilder();
@@ -260,7 +259,7 @@ public interface ServerRequest {
 	 * public ServerResponse myHandleMethod(ServerRequest request) {
 	 *   Instant lastModified = // application-specific calculation
 	 *	 return request.checkNotModified(lastModified)
-	 *	   .orElseGet(() -> {
+	 *	   .orElseGet(() -&gt; {
 	 *	     // further request processing, actually building content
 	 *		 return ServerResponse.ok().body(...);
 	 *	   });
@@ -269,7 +268,7 @@ public interface ServerRequest {
 	 * also with conditional POST/PUT/DELETE requests.
 	 * <p><strong>Note:</strong> you can use either
 	 * this {@code #checkNotModified(Instant)} method; or
-	 * {@link #checkNotModified(String)}. If you want enforce both
+	 * {@link #checkNotModified(String)}. If you want to enforce both
 	 * a strong entity tag and a Last-Modified value,
 	 * as recommended by the HTTP specification,
 	 * then you should use {@link #checkNotModified(Instant, String)}.
@@ -294,7 +293,7 @@ public interface ServerRequest {
 	 * public ServerResponse myHandleMethod(ServerRequest request) {
 	 *   String eTag = // application-specific calculation
 	 *	 return request.checkNotModified(eTag)
-	 *	   .orElseGet(() -> {
+	 *	   .orElseGet(() -&gt; {
 	 *	     // further request processing, actually building content
 	 *		 return ServerResponse.ok().body(...);
 	 *	   });
@@ -303,7 +302,7 @@ public interface ServerRequest {
 	 * also with conditional POST/PUT/DELETE requests.
 	 * <p><strong>Note:</strong> you can use either
 	 * this {@link #checkNotModified(Instant)} method; or
-	 * {@code #checkNotModified(String)}. If you want enforce both
+	 * {@code #checkNotModified(String)}. If you want to enforce both
 	 * a strong entity tag and a Last-Modified value,
 	 * as recommended by the HTTP specification,
 	 * then you should use {@link #checkNotModified(Instant, String)}.
@@ -331,7 +330,7 @@ public interface ServerRequest {
 	 *   Instant lastModified = // application-specific calculation
 	 *   String eTag = // application-specific calculation
 	 *	 return request.checkNotModified(lastModified, eTag)
-	 *	   .orElseGet(() -> {
+	 *	   .orElseGet(() -&gt; {
 	 *	     // further request processing, actually building content
 	 *		 return ServerResponse.ok().body(...);
 	 *	   });

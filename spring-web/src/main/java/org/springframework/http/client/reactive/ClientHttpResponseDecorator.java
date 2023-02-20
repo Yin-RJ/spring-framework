@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.springframework.util.MultiValueMap;
 
 /**
  * Wraps another {@link ClientHttpResponse} and delegates all methods to it.
- * Sub-classes can override specific methods selectively.
+ * Subclasses can override specific methods selectively.
  *
  * @author Rossen Stoyanchev
  * @since 5.0
@@ -49,6 +49,11 @@ public class ClientHttpResponseDecorator implements ClientHttpResponse {
 
 
 	// ClientHttpResponse delegation methods...
+
+	@Override
+	public String getId() {
+		return this.delegate.getId();
+	}
 
 	@Override
 	public HttpStatus getStatusCode() {

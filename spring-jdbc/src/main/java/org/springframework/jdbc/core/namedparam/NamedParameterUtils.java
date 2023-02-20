@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.springframework.util.Assert;
  *
  * @author Thomas Risberg
  * @author Juergen Hoeller
+ * @author Yanming Zhou
  * @since 2.0
  */
 public abstract class NamedParameterUtils {
@@ -77,9 +78,9 @@ public abstract class NamedParameterUtils {
 	 * Parse the SQL statement and locate any placeholders or named parameters.
 	 * Named parameters are substituted for a JDBC placeholder.
 	 * @param sql the SQL statement
-	 * @return the parsed statement, represented as ParsedSql instance
+	 * @return the parsed statement, represented as {@link ParsedSql} instance
 	 */
-	public static ParsedSql parseSqlStatement(final String sql) {
+	public static ParsedSql parseSqlStatement(String sql) {
 		Assert.notNull(sql, "SQL must not be null");
 
 		Set<String> namedParameters = new HashSet<>();
@@ -121,17 +122,20 @@ public abstract class NamedParameterUtils {
 					while (statement[j] != '}') {
 						j++;
 						if (j >= statement.length) {
-							throw new InvalidDataAccessApiUsageException("Non-terminated named parameter declaration " +
-									"at position " + i + " in statement: " + sql);
+							throw new InvalidDataAccessApiUsageException(
+									"Non-terminated named parameter declaration at position " + i +
+									" in statement: " + sql);
 						}
 						if (statement[j] == ':' || statement[j] == '{') {
-							throw new InvalidDataAccessApiUsageException("Parameter name contains invalid character '" +
-									statement[j] + "' at position " + i + " in statement: " + sql);
+							throw new InvalidDataAccessApiUsageException(
+									"Parameter name contains invalid character '" + statement[j] +
+									"' at position " + i + " in statement: " + sql);
 						}
 					}
 					if (j - i > 2) {
 						parameter = sql.substring(i + 2, j);
-						namedParameterCount = addNewNamedParameter(namedParameters, namedParameterCount, parameter);
+						namedParameterCount = addNewNamedParameter(
+								namedParameters, namedParameterCount, parameter);
 						totalParameterCount = addNamedParameter(
 								parameterList, totalParameterCount, escapes, i, j + 1, parameter);
 					}
@@ -143,7 +147,8 @@ public abstract class NamedParameterUtils {
 					}
 					if (j - i > 1) {
 						parameter = sql.substring(i + 1, j);
-						namedParameterCount = addNewNamedParameter(namedParameters, namedParameterCount, parameter);
+						namedParameterCount = addNewNamedParameter(
+								namedParameters, namedParameterCount, parameter);
 						totalParameterCount = addNamedParameter(
 								parameterList, totalParameterCount, escapes, i, j, parameter);
 					}
@@ -184,8 +189,8 @@ public abstract class NamedParameterUtils {
 		return parsedSql;
 	}
 
-	private static int addNamedParameter(
-			List<ParameterHolder> parameterList, int totalParameterCount, int escapes, int i, int j, String parameter) {
+	private static int addNamedParameter(List<ParameterHolder> parameterList,
+			int totalParameterCount, int escapes, int i, int j, String parameter) {
 
 		parameterList.add(new ParameterHolder(parameter, i - escapes, j - escapes));
 		totalParameterCount++;
@@ -270,6 +275,7 @@ public abstract class NamedParameterUtils {
 		if (paramNames.isEmpty()) {
 			return originalSql;
 		}
+
 		StringBuilder actualSql = new StringBuilder(originalSql.length());
 		int lastIndex = 0;
 		for (int i = 0; i < paramNames.size(); i++) {
@@ -346,8 +352,14 @@ public abstract class NamedParameterUtils {
 			String paramName = paramNames.get(i);
 			try {
 				SqlParameter param = findParameter(declaredParams, paramName, i);
-				paramArray[i] = (param != null ? new SqlParameterValue(param, paramSource.getValue(paramName)) :
-						SqlParameterSourceUtils.getTypedValue(paramSource, paramName));
+				Object paramValue = paramSource.getValue(paramName);
+				if (paramValue instanceof SqlParameterValue) {
+					paramArray[i] = paramValue;
+				}
+				else {
+					paramArray[i] = (param != null ? new SqlParameterValue(param, paramValue) :
+							SqlParameterSourceUtils.getTypedValue(paramSource, paramName));
+				}
 			}
 			catch (IllegalArgumentException ex) {
 				throw new InvalidDataAccessApiUsageException(

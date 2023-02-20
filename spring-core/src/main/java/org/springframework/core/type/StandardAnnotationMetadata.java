@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -162,14 +162,14 @@ public class StandardAnnotationMetadata extends StandardClassMetadata implements
 				throw new IllegalStateException("Failed to introspect annotated methods on " + getIntrospectedClass(), ex);
 			}
 		}
-		return annotatedMethods != null ? annotatedMethods : Collections.emptySet();
+		return (annotatedMethods != null ? annotatedMethods : Collections.emptySet());
 	}
 
-	private boolean isAnnotatedMethod(Method method, String annotationName) {
+
+	private static boolean isAnnotatedMethod(Method method, String annotationName) {
 		return !method.isBridge() && method.getAnnotations().length > 0 &&
 				AnnotatedElementUtils.isAnnotated(method, annotationName);
 	}
-
 
 	static AnnotationMetadata from(Class<?> introspectedClass) {
 		return new StandardAnnotationMetadata(introspectedClass, true);

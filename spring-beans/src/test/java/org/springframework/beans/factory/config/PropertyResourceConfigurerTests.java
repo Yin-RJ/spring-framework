@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.beans.factory.config;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -111,7 +112,7 @@ public class PropertyResourceConfigurerTests {
 
 		assertThat(tb1.getAge()).isEqualTo(99);
 		assertThat(tb2.getAge()).isEqualTo(99);
-		assertThat(tb1.getName()).isEqualTo(null);
+		assertThat(tb1.getName()).isNull();
 		assertThat(tb2.getName()).isEqualTo("test");
 	}
 
@@ -310,7 +311,7 @@ public class PropertyResourceConfigurerTests {
 		TestBean tb2 = (TestBean) factory.getBean("tb2");
 		assertThat(tb1.getAge()).isEqualTo(99);
 		assertThat(tb2.getAge()).isEqualTo(99);
-		assertThat(tb1.getName()).isEqualTo(null);
+		assertThat(tb1.getName()).isNull();
 		assertThat(tb2.getName()).isEqualTo("test");
 	}
 
@@ -357,22 +358,18 @@ public class PropertyResourceConfigurerTests {
 		MutablePropertyValues pvs = new MutablePropertyValues();
 		pvs.add("stringArray", new String[] {"${os.name}", "${age}"});
 
-		List<Object> friends = new ManagedList<>();
-		friends.add("na${age}me");
-		friends.add(new RuntimeBeanReference("${ref}"));
+		List<Object> friends = ManagedList.of("na${age}me", new RuntimeBeanReference("${ref}"));
 		pvs.add("friends", friends);
 
-		Set<Object> someSet = new ManagedSet<>();
-		someSet.add("na${age}me");
-		someSet.add(new RuntimeBeanReference("${ref}"));
-		someSet.add(new TypedStringValue("${age}", Integer.class));
+		Set<Object> someSet = ManagedSet.of("na${age}me",
+				new RuntimeBeanReference("${ref}"), new TypedStringValue("${age}", Integer.class));
 		pvs.add("someSet", someSet);
 
-		Map<Object, Object> someMap = new ManagedMap<>();
-		someMap.put(new TypedStringValue("key${age}"), new TypedStringValue("${age}"));
-		someMap.put(new TypedStringValue("key${age}ref"), new RuntimeBeanReference("${ref}"));
-		someMap.put("key1", new RuntimeBeanReference("${ref}"));
-		someMap.put("key2", "${age}name");
+		Map<Object, Object> someMap = ManagedMap.ofEntries(
+				new SimpleEntry<>(new TypedStringValue("key${age}"), new TypedStringValue("${age}")),
+				new SimpleEntry<>(new TypedStringValue("key${age}ref"), new RuntimeBeanReference("${ref}")),
+				new SimpleEntry<>("key1", new RuntimeBeanReference("${ref}")),
+				new SimpleEntry<>("key2", "${age}name"));
 		MutablePropertyValues innerPvs = new MutablePropertyValues();
 		innerPvs.add("country", "${os.name}");
 		RootBeanDefinition innerBd = new RootBeanDefinition(TestBean.class);
@@ -423,7 +420,7 @@ public class PropertyResourceConfigurerTests {
 		TestBean inner1 = (TestBean) tb2.getSomeMap().get("key3");
 		TestBean inner2 = (TestBean) tb2.getSomeMap().get("mykey4");
 		assertThat(inner1.getAge()).isEqualTo(0);
-		assertThat(inner1.getName()).isEqualTo(null);
+		assertThat(inner1.getName()).isNull();
 		assertThat(inner1.getCountry()).isEqualTo(System.getProperty("os.name"));
 		assertThat(inner2.getAge()).isEqualTo(98);
 		assertThat(inner2.getName()).isEqualTo("namemyvarmyvar${");

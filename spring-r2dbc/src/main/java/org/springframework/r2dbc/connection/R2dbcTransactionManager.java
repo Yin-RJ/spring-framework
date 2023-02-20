@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,18 +39,18 @@ import org.springframework.util.Assert;
  * {@link org.springframework.transaction.ReactiveTransactionManager}
  * implementation for a single R2DBC {@link ConnectionFactory}. This class is
  * capable of working in any environment with any R2DBC driver, as long as the
- * setup uses a {@link ConnectionFactory} as its {@link Connection} factory
- * mechanism. Binds a R2DBC {@link Connection} from the specified
- * {@link ConnectionFactory} to the current subscriber context, potentially
- * allowing for one context-bound {@link Connection} per {@link ConnectionFactory}.
+ * setup uses a {@code ConnectionFactory} as its {@link Connection} factory
+ * mechanism. Binds a R2DBC {@code Connection} from the specified
+ * {@code ConnectionFactory} to the current subscriber context, potentially
+ * allowing for one context-bound {@code Connection} per {@code ConnectionFactory}.
  *
- * <p><b>Note: The {@link ConnectionFactory} that this transaction manager
- * operates on needs to return independent {@link Connection}s.</b>
- * The {@link Connection}s may come from a pool (the typical case), but the
- * {@link ConnectionFactory} must not return scoped scoped {@link Connection}s
- * or the like. This transaction manager will associate {@link Connection}
+ * <p><b>Note: The {@code ConnectionFactory} that this transaction manager
+ * operates on needs to return independent {@code Connection}s.</b>
+ * The {@code Connection}s may come from a pool (the typical case), but the
+ * {@code ConnectionFactory} must not return scoped {@code Connection}s
+ * or the like. This transaction manager will associate {@code Connection}
  * with context-bound transactions itself, according to the specified propagation
- * behavior. It assumes that a separate, independent {@link Connection} can
+ * behavior. It assumes that a separate, independent {@code Connection} can
  * be obtained even during an ongoing transaction.
  *
  * <p>Application code is required to retrieve the R2DBC Connection via
@@ -59,18 +59,18 @@ import org.springframework.util.Assert;
  * Spring classes such as {@code DatabaseClient} use this strategy implicitly.
  * If not used in combination with this transaction manager, the
  * {@link ConnectionFactoryUtils} lookup strategy behaves exactly like the
- * native {@link ConnectionFactory} lookup; it can thus be used in a portable fashion.
+ * native {@code ConnectionFactory} lookup; it can thus be used in a portable fashion.
  *
  * <p>Alternatively, you can allow application code to work with the standard
  * R2DBC lookup pattern {@link ConnectionFactory#create()}, for example for code
  * that is not aware of Spring at all. In that case, define a
- * {@link TransactionAwareConnectionFactoryProxy} for your target {@link ConnectionFactory},
- * and pass that proxy {@link ConnectionFactory} to your DAOs, which will automatically
+ * {@link TransactionAwareConnectionFactoryProxy} for your target {@code ConnectionFactory},
+ * and pass that proxy {@code ConnectionFactory} to your DAOs, which will automatically
  * participate in Spring-managed transactions when accessing it.
  *
  * <p>This transaction manager triggers flush callbacks on registered transaction
  * synchronizations (if synchronization is generally active), assuming resources
- * operating on the underlying R2DBC {@link Connection}.
+ * operating on the underlying R2DBC {@code Connection}.
  *
  * @author Mark Paluch
  * @since 5.3
@@ -88,14 +88,14 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 
 
 	/**
-	 * Create a new @link ConnectionFactoryTransactionManager} instance.
+	 * Create a new {@code R2dbcTransactionManager} instance.
 	 * A ConnectionFactory has to be set to be able to use it.
 	 * @see #setConnectionFactory
 	 */
 	public R2dbcTransactionManager() {}
 
 	/**
-	 * Create a new {@link R2dbcTransactionManager} instance.
+	 * Create a new {@code R2dbcTransactionManager} instance.
 	 * @param connectionFactory the R2DBC ConnectionFactory to manage transactions for
 	 */
 	public R2dbcTransactionManager(ConnectionFactory connectionFactory) {
@@ -107,10 +107,10 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 
 	/**
 	 * Set the R2DBC {@link ConnectionFactory} that this instance should manage transactions for.
-	 * <p>This will typically be a locally defined {@link ConnectionFactory}, for example an connection pool.
-	 * <p><b>The {@link ConnectionFactory} passed in here needs to return independent {@link Connection}s.</b>
-	 * The {@link Connection}s may come from a pool (the typical case), but the {@link ConnectionFactory}
-	 * must not return scoped {@link Connection}s or the like.
+	 * <p>This will typically be a locally defined {@code ConnectionFactory}, for example a connection pool.
+	 * <p><b>The {@code ConnectionFactory} passed in here needs to return independent {@link Connection}s.</b>
+	 * The {@code Connection}s may come from a pool (the typical case), but the {@code ConnectionFactory}
+	 * must not return scoped {@code Connection}s or the like.
 	 * @see TransactionAwareConnectionFactoryProxy
 	 */
 	public void setConnectionFactory(@Nullable ConnectionFactory connectionFactory) {
@@ -127,7 +127,7 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 
 	/**
 	 * Obtain the {@link ConnectionFactory} for actual use.
-	 * @return the {@link ConnectionFactory} (never {@code null})
+	 * @return the {@code ConnectionFactory} (never {@code null})
 	 * @throws IllegalStateException in case of no ConnectionFactory set
 	 */
 	protected ConnectionFactory obtainConnectionFactory() {
@@ -138,12 +138,12 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 
 	/**
 	 * Specify whether to enforce the read-only nature of a transaction (as indicated by
-	 * {@link TransactionDefinition#isReadOnly()} through an explicit statement on the
+	 * {@link TransactionDefinition#isReadOnly()}) through an explicit statement on the
 	 * transactional connection: "SET TRANSACTION READ ONLY" as understood by Oracle,
 	 * MySQL and Postgres.
 	 * <p>The exact treatment, including any SQL statement executed on the connection,
-	 * can be customized through through {@link #prepareTransactionalConnection}.
-	 * @see #prepareTransactionalConnection
+	 * can be customized through {@link #prepareTransactionalConnection(Connection, TransactionDefinition)}.
+	 * @see #prepareTransactionalConnection(Connection, TransactionDefinition)
 	 */
 	public void setEnforceReadOnly(boolean enforceReadOnly) {
 		this.enforceReadOnly = enforceReadOnly;
@@ -179,6 +179,7 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 		return (txObject.hasConnectionHolder() && txObject.getConnectionHolder().isTransactionActive());
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	protected Mono<Void> doBegin(TransactionSynchronizationManager synchronizationManager, Object transaction,
 			TransactionDefinition definition) throws TransactionException {
@@ -192,7 +193,7 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 				Mono<Connection> newCon = Mono.from(obtainConnectionFactory().create());
 				connectionMono = newCon.doOnNext(connection -> {
 					if (logger.isDebugEnabled()) {
-						logger.debug("Acquired Connection [" + newCon + "] for R2DBC transaction");
+						logger.debug("Acquired Connection [" + connection + "] for R2DBC transaction");
 					}
 					txObject.setConnectionHolder(new ConnectionHolder(connection), true);
 				});
@@ -202,27 +203,27 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 				connectionMono = Mono.just(txObject.getConnectionHolder().getConnection());
 			}
 
-			return connectionMono.flatMap(con -> {
-				return prepareTransactionalConnection(con, definition, transaction).then(Mono.from(con.beginTransaction()))
-						.doOnSuccess(v -> {
-							txObject.getConnectionHolder().setTransactionActive(true);
-							Duration timeout = determineTimeout(definition);
-							if (!timeout.isNegative() && !timeout.isZero()) {
-								txObject.getConnectionHolder().setTimeoutInMillis(timeout.toMillis());
-							}
-							// Bind the connection holder to the thread.
-							if (txObject.isNewConnectionHolder()) {
-								synchronizationManager.bindResource(obtainConnectionFactory(), txObject.getConnectionHolder());
-							}
-						}).thenReturn(con).onErrorResume(e -> {
-							if (txObject.isNewConnectionHolder()) {
-								return ConnectionFactoryUtils.releaseConnection(con, obtainConnectionFactory())
-										.doOnTerminate(() -> txObject.setConnectionHolder(null, false))
-										.then(Mono.error(e));
-							}
-							return Mono.error(e);
-						});
-			}).onErrorResume(e -> {
+			return connectionMono.flatMap(con -> prepareTransactionalConnection(con, definition, transaction)
+					.then(Mono.from(con.beginTransaction()))
+					.then(prepareTransactionalConnection(con, definition))
+					.doOnSuccess(v -> {
+						txObject.getConnectionHolder().setTransactionActive(true);
+						Duration timeout = determineTimeout(definition);
+						if (!timeout.isNegative() && !timeout.isZero()) {
+							txObject.getConnectionHolder().setTimeoutInMillis(timeout.toMillis());
+						}
+						// Bind the connection holder to the thread.
+						if (txObject.isNewConnectionHolder()) {
+							synchronizationManager.bindResource(obtainConnectionFactory(), txObject.getConnectionHolder());
+						}
+					}).thenReturn(con).onErrorResume(e -> {
+						if (txObject.isNewConnectionHolder()) {
+							return ConnectionFactoryUtils.releaseConnection(con, obtainConnectionFactory())
+									.doOnTerminate(() -> txObject.setConnectionHolder(null, false))
+									.then(Mono.error(e));
+						}
+						return Mono.error(e);
+			})).onErrorResume(e -> {
 				CannotCreateTransactionException ex = new CannotCreateTransactionException(
 						"Could not open R2DBC Connection for transaction", e);
 				return Mono.error(ex);
@@ -324,56 +325,59 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 			Mono<Void> afterCleanup = Mono.empty();
 
 			if (txObject.isMustRestoreAutoCommit()) {
-				afterCleanup = afterCleanup.then(Mono.from(con.setAutoCommit(true)));
+				Mono<Void> restoreAutoCommitStep = safeCleanupStep(
+						"doCleanupAfterCompletion when restoring autocommit", Mono.from(con.setAutoCommit(true)));
+				afterCleanup = afterCleanup.then(restoreAutoCommitStep);
 			}
 
 			if (txObject.getPreviousIsolationLevel() != null) {
-				afterCleanup = afterCleanup
-						.then(Mono.from(con.setTransactionIsolationLevel(txObject.getPreviousIsolationLevel())));
+				Mono<Void> restoreIsolationStep = safeCleanupStep(
+						"doCleanupAfterCompletion when restoring isolation level",
+						Mono.from(con.setTransactionIsolationLevel(txObject.getPreviousIsolationLevel())));
+				afterCleanup = afterCleanup.then(restoreIsolationStep);
 			}
 
-			return afterCleanup.then(Mono.defer(() -> {
+			Mono<Void> releaseConnectionStep = Mono.defer(() -> {
 				try {
 					if (txObject.isNewConnectionHolder()) {
 						if (logger.isDebugEnabled()) {
 							logger.debug("Releasing R2DBC Connection [" + con + "] after transaction");
 						}
-						return ConnectionFactoryUtils.releaseConnection(con, obtainConnectionFactory());
+						return safeCleanupStep("doCleanupAfterCompletion when releasing R2DBC Connection",
+								ConnectionFactoryUtils.releaseConnection(con, obtainConnectionFactory()));
 					}
 				}
 				finally {
 					txObject.getConnectionHolder().clear();
 				}
 				return Mono.empty();
-			}));
+			});
+			return afterCleanup.then(releaseConnectionStep);
 		});
 	}
 
+	private Mono<Void> safeCleanupStep(String stepDescription, Mono<Void> stepMono) {
+		if (!logger.isDebugEnabled()) {
+			return stepMono.onErrorComplete();
+		}
+		else {
+			return stepMono.doOnError(e ->
+							logger.debug(String.format("Error ignored during %s: %s", stepDescription, e)))
+					.onErrorComplete();
+		}
+	}
+
 	/**
-	 * Prepare the transactional {@link Connection} right after transaction begin.
-	 * <p>The default implementation executes a "SET TRANSACTION READ ONLY" statement if the
-	 * {@link #setEnforceReadOnly "enforceReadOnly"} flag is set to {@code true} and the
-	 * transaction definition indicates a read-only transaction.
-	 * <p>The "SET TRANSACTION READ ONLY" is understood by Oracle, MySQL and Postgres
-	 * and may work with other databases as well. If you'd like to adapt this treatment,
-	 * override this method accordingly.
-	 * @param con the transactional R2DBC Connection
-	 * @param definition the current transaction definition
-	 * @param transaction the transaction object
-	 * @see #setEnforceReadOnly
+	 * Prepare the transactional {@link Connection} right before transaction begin.
+	 * @deprecated in favor of {@link #prepareTransactionalConnection(Connection, TransactionDefinition)}
+	 * since this variant gets called too early (before transaction begin) for read-only customization
 	 */
+	@Deprecated
 	protected Mono<Void> prepareTransactionalConnection(
 			Connection con, TransactionDefinition definition, Object transaction) {
 
 		ConnectionFactoryTransactionObject txObject = (ConnectionFactoryTransactionObject) transaction;
-
 		Mono<Void> prepare = Mono.empty();
-
-		if (isEnforceReadOnly() && definition.isReadOnly()) {
-			prepare = Mono.from(con.createStatement("SET TRANSACTION READ ONLY").execute())
-					.flatMapMany(Result::getRowsUpdated)
-					.then();
-		}
 
 		// Apply specific isolation level, if any.
 		IsolationLevel isolationLevelToUse = resolveIsolationLevel(definition.getIsolationLevel());
@@ -405,9 +409,32 @@ public class R2dbcTransactionManager extends AbstractReactiveTransactionManager 
 	}
 
 	/**
-	 * Resolve the {@link TransactionDefinition#getIsolationLevel() isolation level constant} to a R2DBC
+	 * Prepare the transactional {@link Connection} right after transaction begin.
+	 * <p>The default implementation executes a "SET TRANSACTION READ ONLY" statement if the
+	 * {@link #setEnforceReadOnly "enforceReadOnly"} flag is set to {@code true} and the
+	 * transaction definition indicates a read-only transaction.
+	 * <p>The "SET TRANSACTION READ ONLY" is understood by Oracle, MySQL and Postgres
+	 * and may work with other databases as well. If you'd like to adapt this treatment,
+	 * override this method accordingly.
+	 * @param con the transactional R2DBC Connection
+	 * @param definition the current transaction definition
+	 * @since 5.3.22
+	 * @see #setEnforceReadOnly
+	 */
+	protected Mono<Void> prepareTransactionalConnection(Connection con, TransactionDefinition definition) {
+		Mono<Void> prepare = Mono.empty();
+		if (isEnforceReadOnly() && definition.isReadOnly()) {
+			prepare = Mono.from(con.createStatement("SET TRANSACTION READ ONLY").execute())
+					.flatMapMany(Result::getRowsUpdated)
+					.then();
+		}
+		return prepare;
+	}
+
+	/**
+	 * Resolve the {@linkplain TransactionDefinition#getIsolationLevel() isolation level constant} to a R2DBC
 	 * {@link IsolationLevel}. If you'd like to extend isolation level translation for vendor-specific
-	 * {@link IsolationLevel}s, override this method accordingly.
+	 * {@code IsolationLevel}s, override this method accordingly.
 	 * @param isolationLevel the isolation level to translate.
 	 * @return the resolved isolation level. Can be {@code null} if not resolvable or the isolation level
 	 * should remain {@link TransactionDefinition#ISOLATION_DEFAULT default}.

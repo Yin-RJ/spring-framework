@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -44,6 +47,9 @@ import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
  * @see <a href="https://tools.ietf.org/html/rfc6266">RFC 6266</a>
  */
 public final class ContentDisposition {
+
+	private final static Pattern BASE64_ENCODED_PATTERN =
+			Pattern.compile("=\\?([0-9a-zA-Z-_]+)\\?B\\?([+/0-9a-zA-Z]+=*)\\?=");
 
 	private static final String INVALID_HEADER_FIELD_PARAMETER_FORMAT =
 			"Invalid header field parameter format (as defined in RFC 5987)";
@@ -136,8 +142,9 @@ public final class ContentDisposition {
 	}
 
 	/**
-	 * Return the value of the {@literal filename} parameter (or the value of the
-	 * {@literal filename*} one decoded as defined in the RFC 5987), or {@code null} if not defined.
+	 * Return the value of the {@literal filename} parameter, possibly decoded
+	 * from BASE64 encoding based on RFC 2047, or of the {@literal filename*}
+	 * parameter, possibly decoded as defined in the RFC 5987.
 	 */
 	@Nullable
 	public String getFilename() {
@@ -226,9 +233,9 @@ public final class ContentDisposition {
 		result = 31 * result + ObjectUtils.nullSafeHashCode(this.filename);
 		result = 31 * result + ObjectUtils.nullSafeHashCode(this.charset);
 		result = 31 * result + ObjectUtils.nullSafeHashCode(this.size);
-		result = 31 * result + (this.creationDate != null ? this.creationDate.hashCode() : 0);
-		result = 31 * result + (this.modificationDate != null ? this.modificationDate.hashCode() : 0);
-		result = 31 * result + (this.readDate != null ? this.readDate.hashCode() : 0);
+		result = 31 * result + ObjectUtils.nullSafeHashCode(this.creationDate);
+		result = 31 * result + ObjectUtils.nullSafeHashCode(this.modificationDate);
+		result = 31 * result + ObjectUtils.nullSafeHashCode(this.readDate);
 		return result;
 	}
 
@@ -353,7 +360,7 @@ public final class ContentDisposition {
 					if (idx1 != -1 && idx2 != -1) {
 						charset = Charset.forName(value.substring(0, idx1).trim());
 						Assert.isTrue(UTF_8.equals(charset) || ISO_8859_1.equals(charset),
-								"Charset should be UTF-8 or ISO-8859-1");
+								"Charset must be UTF-8 or ISO-8859-1");
 						filename = decodeFilename(value.substring(idx2 + 1), charset);
 					}
 					else {
@@ -362,7 +369,20 @@ public final class ContentDisposition {
 					}
 				}
 				else if (attribute.equals("filename") && (filename == null)) {
-					filename = value;
+					if (value.startsWith("=?") ) {
+						Matcher matcher = BASE64_ENCODED_PATTERN.matcher(value);
+						if (matcher.find()) {
+							String match1 = matcher.group(1);
+							String match2 = matcher.group(2);
+							filename = new String(Base64.getDecoder().decode(match2), Charset.forName(match1));
+						}
+						else {
+							filename = value;
+						}
+					}
+					else {
+						filename = value;
+					}
 				}
 				else if (attribute.equals("size") ) {
 					size = Long.parseLong(value);
@@ -445,8 +465,9 @@ public final class ContentDisposition {
 	 * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
 	 */
 	private static String decodeFilename(String filename, Charset charset) {
-		Assert.notNull(filename, "'input' String` should not be null");
-		Assert.notNull(charset, "'charset' should not be null");
+		Assert.notNull(filename, "'filename' must not be null");
+		Assert.notNull(charset, "'charset' must not be null");
+
 		byte[] value = filename.getBytes(charset);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		int index = 0;
@@ -495,7 +516,7 @@ public final class ContentDisposition {
 			}
 			escaped = (!escaped && c == '\\');
 		}
-		// Remove backslash at the end..
+		// Remove backslash at the end.
 		if (escaped) {
 			sb.deleteCharAt(sb.length() - 1);
 		}
@@ -511,10 +532,11 @@ public final class ContentDisposition {
 	 * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
 	 */
 	private static String encodeFilename(String input, Charset charset) {
-		Assert.notNull(input, "`input` is required");
-		Assert.notNull(charset, "`charset` is required");
+		Assert.notNull(input, "'input' must not be null");
+		Assert.notNull(charset, "'charset' must not be null");
 		Assert.isTrue(!StandardCharsets.US_ASCII.equals(charset), "ASCII does not require encoding");
-		Assert.isTrue(UTF_8.equals(charset) || ISO_8859_1.equals(charset), "Only UTF-8 and ISO-8859-1 supported.");
+		Assert.isTrue(UTF_8.equals(charset) || ISO_8859_1.equals(charset), "Only UTF-8 and ISO-8859-1 are supported");
+
 		byte[] source = input.getBytes(charset);
 		int len = source.length;
 		StringBuilder sb = new StringBuilder(len << 1);
@@ -556,14 +578,13 @@ public final class ContentDisposition {
 		Builder filename(String filename);
 
 		/**
-		 * Set the value of the {@literal filename*} that will be encoded as
-		 * defined in the RFC 5987. Only the US-ASCII, UTF-8 and ISO-8859-1
+		 * Set the value of the {@code filename} that will be encoded as
+		 * defined in RFC 5987. Only the US-ASCII, UTF-8, and ISO-8859-1
 		 * charsets are supported.
 		 * <p><strong>Note:</strong> Do not use this for a
-		 * {@code "multipart/form-data"} requests as per
-		 * <a link="https://tools.ietf.org/html/rfc7578#section-4.2">RFC 7578, Section 4.2</a>
-		 * and also RFC 5987 itself mentions it does not apply to multipart
-		 * requests.
+		 * {@code "multipart/form-data"} request since
+		 * <a href="https://tools.ietf.org/html/rfc7578#section-4.2">RFC 7578, Section 4.2</a>
+		 * and also RFC 5987 mention it does not apply to multipart requests.
 		 */
 		Builder filename(String filename, Charset charset);
 

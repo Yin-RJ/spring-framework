@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -641,7 +641,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	 * {@link org.springframework.web.context.ConfigurableWebApplicationContext}
 	 * interface. Can be overridden in subclasses.
 	 * <p>Do not forget to register this servlet instance as application listener on the
-	 * created context (for triggering its {@link #onRefresh callback}, and to call
+	 * created context (for triggering its {@link #onRefresh callback}), and to call
 	 * {@link org.springframework.context.ConfigurableApplicationContext#refresh()}
 	 * before returning the context instance.
 	 * @param parent the parent ApplicationContext to use, or {@code null} if none
@@ -1084,8 +1084,8 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 			return;
 		}
 
-		String dispatchType = request.getDispatcherType().name();
-		boolean initialDispatch = request.getDispatcherType().equals(DispatcherType.REQUEST);
+		DispatcherType dispatchType = request.getDispatcherType();
+		boolean initialDispatch = (dispatchType == DispatcherType.REQUEST);
 
 		if (failureCause != null) {
 			if (!initialDispatch) {
@@ -1109,7 +1109,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		}
 
 		int status = response.getStatus();
-		String headers = ""; // nothing below trace
+		String headers = "";  // nothing below trace
 
 		if (logger.isTraceEnabled()) {
 			Collection<String> names = response.getHeaderNames();

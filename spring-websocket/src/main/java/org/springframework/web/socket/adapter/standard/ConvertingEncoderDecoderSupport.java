@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Strategy method used to obtain the {@link ConversionService}. By default this
+	 * Strategy method used to obtain the {@link ConversionService}. By default, this
 	 * method expects a bean named {@code 'webSocketConversionService'} in the
 	 * {@link #getApplicationContext() active ApplicationContext}.
 	 * @return the {@link ConversionService} (never null)
@@ -119,7 +119,7 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Returns the active {@link ApplicationContext}. Be default this method obtains
+	 * Returns the active {@link ApplicationContext}. By default, this method obtains
 	 * the context via {@link ContextLoader#getCurrentWebApplicationContext()}, which
 	 * finds the ApplicationContext loaded via {@link ContextLoader} typically in a
 	 * Servlet container environment. When not running in a Servlet container and
@@ -132,7 +132,7 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Returns the type being converted. By default the type is resolved using
+	 * Returns the type being converted. By default, the type is resolved using
 	 * the generic arguments of the class.
 	 */
 	protected TypeDescriptor getType() {
@@ -140,7 +140,7 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Returns the websocket message type. By default the type is resolved using
+	 * Returns the websocket message type. By default, the type is resolved using
 	 * the generic arguments of the class.
 	 */
 	protected TypeDescriptor getMessageType() {
@@ -183,7 +183,7 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Decode the a message into an object.
+	 * Decode the message into an object.
 	 * @see javax.websocket.Decoder.Text#decode(String)
 	 * @see javax.websocket.Decoder.Binary#decode(ByteBuffer)
 	 */

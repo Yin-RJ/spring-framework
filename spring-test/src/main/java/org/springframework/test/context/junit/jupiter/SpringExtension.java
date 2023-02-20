@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ import org.springframework.core.annotation.RepeatableContainers;
 import org.springframework.lang.Nullable;
 import org.springframework.test.context.TestConstructor;
 import org.springframework.test.context.TestContextManager;
+import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.support.PropertyProvider;
 import org.springframework.test.context.support.TestConstructorUtils;
 import org.springframework.util.Assert;
@@ -88,8 +89,8 @@ public class SpringExtension implements BeforeAllCallback, AfterAllCallback, Tes
 	 * {@link Namespace} in which {@code @Autowired} validation error messages
 	 * are stored, keyed by test class.
 	 */
-	private static final Namespace AUTOWIRED_VALIDATION_NAMESPACE = Namespace.create(SpringExtension.class.getName() +
-			"#autowired.validation");
+	private static final Namespace AUTOWIRED_VALIDATION_NAMESPACE =
+			Namespace.create(SpringExtension.class.getName() + "#autowired.validation");
 
 	private static final String NO_AUTOWIRED_VIOLATIONS_DETECTED = "NO AUTOWIRED VIOLATIONS DETECTED";
 
@@ -100,8 +101,8 @@ public class SpringExtension implements BeforeAllCallback, AfterAllCallback, Tes
 
 	private static final MethodFilter autowiredTestOrLifecycleMethodFilter =
 			ReflectionUtils.USER_DECLARED_METHODS
-				.and(method -> !Modifier.isPrivate(method.getModifiers()))
-				.and(SpringExtension::isAutowiredTestOrLifecycleMethod);
+					.and(method -> !Modifier.isPrivate(method.getModifiers()))
+					.and(SpringExtension::isAutowiredTestOrLifecycleMethod);
 
 
 	/**
@@ -146,16 +147,16 @@ public class SpringExtension implements BeforeAllCallback, AfterAllCallback, Tes
 		// We save the result in the ExtensionContext.Store so that we don't
 		// re-validate all methods for the same test class multiple times.
 		Store store = context.getStore(AUTOWIRED_VALIDATION_NAMESPACE);
-		String errorMessage = store.getOrComputeIfAbsent(context.getRequiredTestClass(),
-			testClass -> {
+
+		String errorMessage = store.getOrComputeIfAbsent(context.getRequiredTestClass(), testClass -> {
 				Method[] methodsWithErrors =
 						ReflectionUtils.getUniqueDeclaredMethods(testClass, autowiredTestOrLifecycleMethodFilter);
 				return (methodsWithErrors.length == 0 ? NO_AUTOWIRED_VIOLATIONS_DETECTED :
 						String.format(
-							"Test methods and test lifecycle methods must not be annotated with @Autowired. " +
-							"You should instead annotate individual method parameters with @Autowired, " +
-							"@Qualifier, or @Value. Offending methods in test class %s: %s",
-							testClass.getName(), Arrays.toString(methodsWithErrors)));
+								"Test methods and test lifecycle methods must not be annotated with @Autowired. " +
+								"You should instead annotate individual method parameters with @Autowired, " +
+								"@Qualifier, or @Value. Offending methods in test class %s: %s",
+								testClass.getName(), Arrays.toString(methodsWithErrors)));
 			}, String.class);
 
 		if (errorMessage != NO_AUTOWIRED_VIOLATIONS_DETECTED) {
@@ -218,6 +219,7 @@ public class SpringExtension implements BeforeAllCallback, AfterAllCallback, Tes
 	 * invoked with a fallback {@link PropertyProvider} that delegates its lookup
 	 * to {@link ExtensionContext#getConfigurationParameter(String)}.</li>
 	 * <li>The parameter is of type {@link ApplicationContext} or a sub-type thereof.</li>
+	 * <li>The parameter is of type {@link ApplicationEvents} or a sub-type thereof.</li>
 	 * <li>{@link ParameterResolutionDelegate#isAutowirable} returns {@code true}.</li>
 	 * </ol>
 	 * <p><strong>WARNING</strong>: If a test class {@code Constructor} is annotated
@@ -238,7 +240,17 @@ public class SpringExtension implements BeforeAllCallback, AfterAllCallback, Tes
 				extensionContext.getConfigurationParameter(propertyName).orElse(null);
 		return (TestConstructorUtils.isAutowirableConstructor(executable, testClass, junitPropertyProvider) ||
 				ApplicationContext.class.isAssignableFrom(parameter.getType()) ||
+				supportsApplicationEvents(parameterContext) ||
 				ParameterResolutionDelegate.isAutowirable(parameter, parameterContext.getIndex()));
+	}
+
+	private boolean supportsApplicationEvents(ParameterContext parameterContext) {
+		if (ApplicationEvents.class.isAssignableFrom(parameterContext.getParameter().getType())) {
+			Assert.isTrue(parameterContext.getDeclaringExecutable() instanceof Method,
+					"ApplicationEvents can only be injected into test and lifecycle methods");
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -275,7 +287,7 @@ public class SpringExtension implements BeforeAllCallback, AfterAllCallback, Tes
 	 * Get the {@link TestContextManager} associated with the supplied {@code ExtensionContext}.
 	 * @return the {@code TestContextManager} (never {@code null})
 	 */
-	private static TestContextManager getTestContextManager(ExtensionContext context) {
+	static TestContextManager getTestContextManager(ExtensionContext context) {
 		Assert.notNull(context, "ExtensionContext must not be null");
 		Class<?> testClass = context.getRequiredTestClass();
 		Store store = getStore(context);

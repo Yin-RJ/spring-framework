@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public abstract class AbstractHandlerMethodAdapter extends WebContentGenerator i
 	/**
 	 * This implementation expects the handler to be an {@link HandlerMethod}.
 	 * @param handler the handler instance to check
-	 * @return whether or not this adapter can adapt the given handler
+	 * @return whether this adapter can adapt the given handler
 	 */
 	@Override
 	public final boolean supports(Object handler) {
@@ -70,9 +70,9 @@ public abstract class AbstractHandlerMethodAdapter extends WebContentGenerator i
 	}
 
 	/**
-	 * Given a handler method, return whether or not this adapter can support it.
+	 * Given a handler method, return whether this adapter can support it.
 	 * @param handlerMethod the handler method to check
-	 * @return whether or not this adapter can adapt the given method
+	 * @return whether this adapter can adapt the given method
 	 */
 	protected abstract boolean supportsInternal(HandlerMethod handlerMethod);
 
@@ -105,6 +105,7 @@ public abstract class AbstractHandlerMethodAdapter extends WebContentGenerator i
 	 * This implementation expects the handler to be an {@link HandlerMethod}.
 	 */
 	@Override
+	@SuppressWarnings("deprecation")
 	public final long getLastModified(HttpServletRequest request, Object handler) {
 		return getLastModifiedInternal(request, (HandlerMethod) handler);
 	}
@@ -114,7 +115,10 @@ public abstract class AbstractHandlerMethodAdapter extends WebContentGenerator i
 	 * @param request current HTTP request
 	 * @param handlerMethod handler method to use
 	 * @return the lastModified value for the given handler
+	 * @deprecated as of 5.3.9 along with
+	 * {@link org.springframework.web.servlet.mvc.LastModified}.
 	 */
+	@Deprecated
 	protected abstract long getLastModifiedInternal(HttpServletRequest request, HandlerMethod handlerMethod);
 
 }

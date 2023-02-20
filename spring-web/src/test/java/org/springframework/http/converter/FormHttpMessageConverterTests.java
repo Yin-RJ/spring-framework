@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 import static org.springframework.http.MediaType.MULTIPART_MIXED;
@@ -147,9 +145,12 @@ public class FormHttpMessageConverterTests {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		this.converter.write(body, APPLICATION_FORM_URLENCODED, outputMessage);
 
-		assertThat(outputMessage.getBodyAsString(StandardCharsets.UTF_8)).as("Invalid result").isEqualTo("name+1=value+1&name+2=value+2%2B1&name+2=value+2%2B2&name+3");
-		assertThat(outputMessage.getHeaders().getContentType().toString()).as("Invalid content-type").isEqualTo("application/x-www-form-urlencoded;charset=UTF-8");
-		assertThat(outputMessage.getHeaders().getContentLength()).as("Invalid content-length").isEqualTo(outputMessage.getBodyAsBytes().length);
+		assertThat(outputMessage.getBodyAsString(StandardCharsets.UTF_8))
+				.as("Invalid result").isEqualTo("name+1=value+1&name+2=value+2%2B1&name+2=value+2%2B2&name+3");
+		assertThat(outputMessage.getHeaders().getContentType().toString())
+				.as("Invalid content-type").isEqualTo("application/x-www-form-urlencoded;charset=UTF-8");
+		assertThat(outputMessage.getHeaders().getContentLength())
+				.as("Invalid content-length").isEqualTo(outputMessage.getBodyAsBytes().length);
 	}
 
 	@Test
@@ -226,7 +227,6 @@ public class FormHttpMessageConverterTests {
 		item = items.get(5);
 		assertThat(item.getFieldName()).isEqualTo("xml");
 		assertThat(item.getContentType()).isEqualTo("text/xml");
-		verify(outputMessage.getBody(), never()).close();
 	}
 
 	@Test // SPR-13309
@@ -271,6 +271,29 @@ public class FormHttpMessageConverterTests {
 		assertThat(item.getString())
 				.startsWith("<MyBean")
 				.endsWith("><string>foo</string></MyBean>");
+	}
+
+	@Test
+	public void writeMultipartCharset() throws Exception {
+		MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
+		Resource logo = new ClassPathResource("/org/springframework/http/converter/logo.jpg");
+		parts.add("logo", logo);
+
+		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+		this.converter.write(parts, MULTIPART_FORM_DATA, outputMessage);
+
+		MediaType contentType = outputMessage.getHeaders().getContentType();
+		Map<String, String> parameters = contentType.getParameters();
+		assertThat(parameters).containsOnlyKeys("boundary");
+
+		this.converter.setCharset(StandardCharsets.ISO_8859_1);
+
+		outputMessage = new MockHttpOutputMessage();
+		this.converter.write(parts, MULTIPART_FORM_DATA, outputMessage);
+
+		parameters = outputMessage.getHeaders().getContentType().getParameters();
+		assertThat(parameters).containsOnlyKeys("boundary", "charset");
+		assertThat(parameters).containsEntry("charset", "ISO-8859-1");
 	}
 
 	private void assertCanRead(MediaType mediaType) {

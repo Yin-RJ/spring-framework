@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import org.springframework.lang.Nullable;
  * <li>Catch-all readers or writers, e.g. String with any media type.
  * </ol>
  *
- * <p>Typed and object readers are further sub-divided and ordered as follows:
+ * <p>Typed and object readers are further subdivided and ordered as follows:
  * <ol>
  * <li>Default HTTP reader and writer registrations.
  * <li>Custom readers and writers.
@@ -191,6 +191,17 @@ public interface CodecConfigurer {
 		 * @see org.springframework.http.codec.json.KotlinSerializationJsonEncoder
 		 */
 		void kotlinSerializationJsonEncoder(Encoder<?> encoder);
+
+		/**
+		 * Register a consumer to apply to default config instances. This can be
+		 * used to configure rather than replace a specific codec or multiple
+		 * codecs. The consumer is applied to every default {@link Encoder},
+		 * {@link Decoder}, {@link HttpMessageReader} and {@link HttpMessageWriter}
+		 * instance.
+		 * @param codecConsumer the consumer to apply
+		 * @since 5.3.4
+		 */
+		void configureDefaultCodec(Consumer<Object> codecConsumer);
 
 		/**
 		 * Configure a limit on the number of bytes that can be buffered whenever

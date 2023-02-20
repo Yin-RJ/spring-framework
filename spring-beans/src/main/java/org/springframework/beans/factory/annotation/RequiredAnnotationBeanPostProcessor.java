@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import org.springframework.util.Assert;
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
  * that enforces required JavaBean properties to have been configured.
- * Required bean properties are detected through a Java 5 annotation:
+ * Required bean properties are detected through an annotation:
  * by default, Spring's {@link Required} annotation.
  *
  * <p>The motivation for the existence of this BeanPostProcessor is to allow
@@ -217,13 +217,13 @@ public class RequiredAnnotationBeanPostProcessor implements SmartInstantiationAw
 					sb.append(" and");
 				}
 				else {
-					sb.append(",");
+					sb.append(',');
 				}
 			}
-			sb.append(" '").append(propertyName).append("'");
+			sb.append(" '").append(propertyName).append('\'');
 		}
 		sb.append(size == 1 ? " is" : " are");
-		sb.append(" required for bean '").append(beanName).append("'");
+		sb.append(" required for bean '").append(beanName).append('\'');
 		return sb.toString();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,12 +47,18 @@ import org.springframework.util.ClassUtils;
  * caches the ASM discovered information for each introspected Class, in a thread-safe
  * manner. It is recommended to reuse ParameterNameDiscoverer instances as far as possible.
  *
+ * <p>This discoverer variant is effectively superseded by the Java 8 based
+ * {@link StandardReflectionParameterNameDiscoverer} but included as a fallback still
+ * (for code not compiled with the standard "-parameters" compiler flag).
+ *
  * @author Adrian Colyer
  * @author Costin Leau
  * @author Juergen Hoeller
  * @author Chris Beams
  * @author Sam Brannen
  * @since 2.0
+ * @see StandardReflectionParameterNameDiscoverer
+ * @see DefaultParameterNameDiscoverer
  */
 public class LocalVariableTableParameterNameDiscoverer implements ParameterNameDiscoverer {
 
@@ -101,6 +107,8 @@ public class LocalVariableTableParameterNameDiscoverer implements ParameterNameD
 			}
 			return NO_DEBUG_INFO_MAP;
 		}
+		// We cannot use try-with-resources here for the InputStream, since we have
+		// custom handling of the close() method in a finally-block.
 		try {
 			ClassReader classReader = new ClassReader(is);
 			Map<Executable, String[]> map = new ConcurrentHashMap<>(32);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.web.reactive.function.client;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -68,7 +70,7 @@ class DefaultWebClient implements WebClient {
 	private static final String URI_TEMPLATE_ATTRIBUTE = WebClient.class.getName() + ".uriTemplate";
 
 	private static final Mono<ClientResponse> NO_HTTP_CLIENT_RESPONSE_ERROR = Mono.error(
-			new IllegalStateException("The underlying HTTP client completed without emitting a response."));
+			() -> new IllegalStateException("The underlying HTTP client completed without emitting a response."));
 
 
 	private final ExchangeFunction exchangeFunction;
@@ -612,7 +614,9 @@ class DefaultWebClient implements WebClient {
 		public Mono<ResponseEntity<Void>> toBodilessEntity() {
 			return this.responseMono.flatMap(response ->
 					WebClientUtils.mapToEntity(response, handleBodyMono(response, Mono.<Void>empty()))
-							.flatMap(entity -> response.releaseBody().thenReturn(entity))
+							.flatMap(entity -> response.releaseBody()
+									.onErrorResume(WebClientUtils.WRAP_EXCEPTION_PREDICATE, exceptionWrappingFunction(response))
+									.thenReturn(entity))
 			);
 		}
 
@@ -665,10 +669,22 @@ class DefaultWebClient implements WebClient {
 		}
 
 		private <T> Mono<T> insertCheckpoint(Mono<T> result, int statusCode, HttpRequest request) {
-			String httpMethod = request.getMethodValue();
+			String method = request.getMethodValue();
+			URI uri = getUriToLog(request);
+			return result.checkpoint(statusCode + " from " + method + " " + uri + " [DefaultWebClient]");
+		}
+
+		private static URI getUriToLog(HttpRequest request) {
 			URI uri = request.getURI();
-			String description = statusCode + " from " + httpMethod + " " + uri + " [DefaultWebClient]";
-			return result.checkpoint(description);
+			if (StringUtils.hasText(uri.getQuery())) {
+				try {
+					uri = new URI(uri.getScheme(), uri.getHost(), uri.getPath(), null);
+				}
+				catch (URISyntaxException ex) {
+					// ignore
+				}
+			}
+			return uri;
 		}
 
 

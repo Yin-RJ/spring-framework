@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ import org.springframework.messaging.simp.broker.BrokerAvailabilityEvent;
 import org.springframework.messaging.support.ExecutorSubscribableChannel;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.Assert;
-import org.springframework.util.SocketUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -75,19 +74,20 @@ public class StompBrokerRelayMessageHandlerIntegrationTests {
 
 
 	@BeforeEach
-	public void setUp(TestInfo testInfo) throws Exception {
+	@SuppressWarnings("deprecation")
+	public void setup(TestInfo testInfo) throws Exception {
 		logger.debug("Setting up before '" + testInfo.getTestMethod().get().getName() + "'");
 
-		this.port = SocketUtils.findAvailableTcpPort(61613);
+		this.port = org.springframework.util.SocketUtils.findAvailableTcpPort(61613);
 		this.responseChannel = new ExecutorSubscribableChannel();
 		this.responseHandler = new TestMessageHandler();
 		this.responseChannel.subscribe(this.responseHandler);
 		this.eventPublisher = new TestEventPublisher();
-		startActiveMqBroker();
+		startActiveMQBroker();
 		createAndStartRelay();
 	}
 
-	private void startActiveMqBroker() throws Exception {
+	private void startActiveMQBroker() throws Exception {
 		this.activeMQBroker = new BrokerService();
 		this.activeMQBroker.addConnector("stomp://localhost:" + this.port);
 		this.activeMQBroker.setStartAsync(false);
@@ -217,7 +217,7 @@ public class StompBrokerRelayMessageHandlerIntegrationTests {
 
 		this.eventPublisher.expectBrokerAvailabilityEvent(false);
 
-		startActiveMqBroker();
+		startActiveMQBroker();
 		this.eventPublisher.expectBrokerAvailabilityEvent(true);
 	}
 

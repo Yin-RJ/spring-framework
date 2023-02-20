@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import org.springframework.web.util.WebUtils;
  * {@link javax.servlet.DispatcherType#ASYNC ASYNC} dispatches that occur in
  * separate threads. A filter can be configured in {@code web.xml} whether it
  * should be involved in async dispatches. However, in some cases servlet
- * containers assume different default configuration. Therefore sub-classes can
+ * containers assume different default configuration. Therefore, subclasses can
  * override the method {@link #shouldNotFilterAsyncDispatch()} to declare
  * statically if they should indeed be invoked, <em>once</em>, during both types
  * of dispatches in order to provide thread initialization, logging, security,
@@ -98,12 +98,10 @@ public abstract class OncePerRequestFilter extends GenericFilterBean {
 		boolean hasAlreadyFilteredAttribute = request.getAttribute(alreadyFilteredAttributeName) != null;
 
 		if (skipDispatch(httpRequest) || shouldNotFilter(httpRequest)) {
-
 			// Proceed without invoking this filter...
 			filterChain.doFilter(request, response);
 		}
 		else if (hasAlreadyFilteredAttribute) {
-
 			if (DispatcherType.ERROR.equals(request.getDispatcherType())) {
 				doFilterNestedErrorDispatch(httpRequest, httpResponse, filterChain);
 				return;
@@ -145,7 +143,7 @@ public abstract class OncePerRequestFilter extends GenericFilterBean {
 	 * @see WebAsyncManager#hasConcurrentResult()
 	 */
 	protected boolean isAsyncDispatch(HttpServletRequest request) {
-		return WebAsyncUtils.getAsyncManager(request).hasConcurrentResult();
+		return DispatcherType.ASYNC.equals(request.getDispatcherType());
 	}
 
 	/**
@@ -197,7 +195,7 @@ public abstract class OncePerRequestFilter extends GenericFilterBean {
 	 * setting up thread locals or to perform final processing at the very end.
 	 * <p>Note that although a filter can be mapped to handle specific dispatcher
 	 * types via {@code web.xml} or in Java through the {@code ServletContext},
-	 * servlet containers may enforce different defaults with regards to
+	 * servlet containers may enforce different defaults with respect to
 	 * dispatcher types. This flag enforces the design intent of the filter.
 	 * <p>The default return value is "true", which means the filter will not be
 	 * invoked during subsequent async dispatches. If "false", the filter will

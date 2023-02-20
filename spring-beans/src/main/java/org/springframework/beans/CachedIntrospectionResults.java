@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.security.ProtectionDomain;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -94,8 +96,6 @@ public final class CachedIntrospectionResults {
 	 * @see Introspector#getBeanInfo(Class, int)
 	 */
 	public static final String IGNORE_BEANINFO_PROPERTY_NAME = "spring.beaninfo.ignore";
-
-	private static final PropertyDescriptor[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = {};
 
 
 	private static final boolean shouldIntrospectorIgnoreBeaninfoClasses =
@@ -286,9 +286,17 @@ public final class CachedIntrospectionResults {
 			// This call is slow so we do it once.
 			PropertyDescriptor[] pds = this.beanInfo.getPropertyDescriptors();
 			for (PropertyDescriptor pd : pds) {
-				if (Class.class == beanClass &&
-						("classLoader".equals(pd.getName()) ||  "protectionDomain".equals(pd.getName()))) {
-					// Ignore Class.getClassLoader() and getProtectionDomain() methods - nobody needs to bind to those
+				if (Class.class == beanClass && !("name".equals(pd.getName()) ||
+						(pd.getName().endsWith("Name") && String.class == pd.getPropertyType()))) {
+					// Only allow all name variants of Class properties
+					continue;
+				}
+				if (URL.class == beanClass && "content".equals(pd.getName())) {
+					// Only allow URL attribute introspection, not content resolution
+					continue;
+				}
+				if (pd.getWriteMethod() == null && isInvalidReadOnlyPropertyType(pd.getPropertyType(), beanClass)) {
+					// Ignore read-only properties such as ClassLoader - no need to bind to those
 					continue;
 				}
 				if (logger.isTraceEnabled()) {
@@ -337,6 +345,11 @@ public final class CachedIntrospectionResults {
 						// GenericTypeAwarePropertyDescriptor leniently resolves a set* write method
 						// against a declared read method, so we prefer read method descriptors here.
 						pd = buildGenericTypeAwarePropertyDescriptor(beanClass, pd);
+						if (pd.getWriteMethod() == null &&
+								isInvalidReadOnlyPropertyType(pd.getPropertyType(), beanClass)) {
+							// Ignore read-only properties such as ClassLoader - no need to bind to those
+							continue;
+						}
 						this.propertyDescriptors.put(pd.getName(), pd);
 						Method readMethod = pd.getReadMethod();
 						if (readMethod != null) {
@@ -354,7 +367,7 @@ public final class CachedIntrospectionResults {
 
 		for (Method method : beanClass.getMethods()) {
 			if (!this.propertyDescriptors.containsKey(method.getName()) &&
-					!readMethodNames.contains((method.getName())) && isPlainAccessor(method)) {
+					!readMethodNames.contains(method.getName()) && isPlainAccessor(method)) {
 				this.propertyDescriptors.put(method.getName(),
 						new GenericTypeAwarePropertyDescriptor(beanClass, method.getName(), method, null, null));
 				readMethodNames.add(method.getName());
@@ -363,8 +376,10 @@ public final class CachedIntrospectionResults {
 	}
 
 	private boolean isPlainAccessor(Method method) {
-		if (method.getParameterCount() > 0 || method.getReturnType() == void.class ||
-				method.getDeclaringClass() == Object.class || Modifier.isStatic(method.getModifiers())) {
+		if (Modifier.isStatic(method.getModifiers()) ||
+				method.getDeclaringClass() == Object.class || method.getDeclaringClass() == Class.class ||
+				method.getParameterCount() > 0 || method.getReturnType() == void.class ||
+				isInvalidReadOnlyPropertyType(method.getReturnType(), method.getDeclaringClass())) {
 			return false;
 		}
 		try {
@@ -375,6 +390,13 @@ public final class CachedIntrospectionResults {
 		catch (Exception ex) {
 			return false;
 		}
+	}
+
+	private boolean isInvalidReadOnlyPropertyType(@Nullable Class<?> returnType, Class<?> beanClass) {
+		return (returnType != null && (ClassLoader.class.isAssignableFrom(returnType) ||
+				ProtectionDomain.class.isAssignableFrom(returnType) ||
+				(AutoCloseable.class.isAssignableFrom(returnType) &&
+						!AutoCloseable.class.isAssignableFrom(beanClass))));
 	}
 
 
@@ -400,7 +422,7 @@ public final class CachedIntrospectionResults {
 	}
 
 	PropertyDescriptor[] getPropertyDescriptors() {
-		return this.propertyDescriptors.values().toArray(EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
+		return this.propertyDescriptors.values().toArray(PropertyDescriptorUtils.EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
 	}
 
 	private PropertyDescriptor buildGenericTypeAwarePropertyDescriptor(Class<?> beanClass, PropertyDescriptor pd) {

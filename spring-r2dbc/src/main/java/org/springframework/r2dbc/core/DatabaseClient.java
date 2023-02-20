@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,9 +44,9 @@ import org.springframework.util.Assert;
  * ConnectionFactory factory = …
  *
  * DatabaseClient client = DatabaseClient.create(factory);
- * Mono&gtActor;lt actor = client.sql("select first_name, last_name from t_actor")
- *     .map(row -> new Actor(row.get("first_name, String.class"),
- *     row.get("last_name, String.class")))
+ * Mono&lt;Actor&gt; actor = client.sql("select first_name, last_name from t_actor")
+ *     .map(row -&gt; new Actor(row.get("first_name", String.class),
+ *          row.get("last_name", String.class)))
  *     .first();
  * </pre>
  *
@@ -79,7 +79,10 @@ public interface DatabaseClient extends ConnectionAccessor {
 	 * the execution. The SQL string can contain either native parameter
 	 * bind markers or named parameters (e.g. {@literal :foo, :bar}) when
 	 * {@link NamedParameterExpander} is enabled.
-	 * <p>Accepts {@link PreparedOperation} as SQL and binding {@link Supplier}
+	 * <p>Accepts {@link PreparedOperation} as SQL and binding {@link Supplier}.
+	 * <p>{@code DatabaseClient} implementations should defer the resolution of
+	 * the SQL string as much as possible, ideally up to the point where a
+	 * {@code Subscription} happens. This is the case for the default implementation.
 	 * @param sqlSupplier a supplier for the SQL statement
 	 * @return a new {@link GenericExecuteSpec}
 	 * @see NamedParameterExpander
@@ -144,7 +147,7 @@ public interface DatabaseClient extends ConnectionAccessor {
 		Builder apply(Consumer<Builder> builderConsumer);
 
 		/**
-		 * Builder the {@link DatabaseClient} instance.
+		 * Build the {@link DatabaseClient} instance.
 		 */
 		DatabaseClient build();
 	}
@@ -190,7 +193,7 @@ public interface DatabaseClient extends ConnectionAccessor {
 		 * before it is executed. For example:
 		 * <pre class="code">
 		 * DatabaseClient client = …;
-		 * client.sql("SELECT book_id FROM book").filter(statement -> statement.fetchSize(100))
+		 * client.sql("SELECT book_id FROM book").filter(statement -&gt; statement.fetchSize(100))
 		 * </pre>
 		 * @param filterFunction the filter to be added to the chain
 		 */
@@ -205,7 +208,7 @@ public interface DatabaseClient extends ConnectionAccessor {
 		 * before it is executed. For example:
 		 * <pre class="code">
 		 * DatabaseClient client = …;
-		 * client.sql("SELECT book_id FROM book").filter((statement, next) -> next.execute(statement.fetchSize(100)))
+		 * client.sql("SELECT book_id FROM book").filter((statement, next) -&gt; next.execute(statement.fetchSize(100)))
 		 * </pre>
 		 * @param filter the filter to be added to the chain
 		 */

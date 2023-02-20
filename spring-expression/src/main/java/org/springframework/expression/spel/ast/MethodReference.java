@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -200,8 +200,7 @@ public class MethodReference extends SpelNodeImpl {
 			EvaluationContext evaluationContext) throws SpelEvaluationException {
 
 		AccessException accessException = null;
-		List<MethodResolver> methodResolvers = evaluationContext.getMethodResolvers();
-		for (MethodResolver methodResolver : methodResolvers) {
+		for (MethodResolver methodResolver : evaluationContext.getMethodResolvers()) {
 			try {
 				MethodExecutor methodExecutor = methodResolver.resolve(
 						evaluationContext, targetObject, this.name, argumentTypes);
@@ -264,7 +263,7 @@ public class MethodReference extends SpelNodeImpl {
 		for (int i = 0; i < getChildCount(); i++) {
 			sj.add(getChild(i).toStringAST());
 		}
-		return this.name + sj.toString();
+		return this.name + sj;
 	}
 
 	/**
@@ -289,12 +288,9 @@ public class MethodReference extends SpelNodeImpl {
 		if (executor.didArgumentConversionOccur()) {
 			return false;
 		}
-		Class<?> clazz = executor.getMethod().getDeclaringClass();
-		if (!Modifier.isPublic(clazz.getModifiers()) && executor.getPublicDeclaringClass() == null) {
-			return false;
-		}
 
-		return true;
+		Class<?> clazz = executor.getMethod().getDeclaringClass();
+		return (Modifier.isPublic(clazz.getModifiers()) || executor.getPublicDeclaringClass() != null);
 	}
 
 	@Override

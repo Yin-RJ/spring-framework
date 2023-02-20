@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
+import reactor.util.context.Context;
 
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
@@ -71,7 +72,7 @@ public abstract class DataBufferUtils {
 	//---------------------------------------------------------------------
 
 	/**
-	 * Obtain a {@link InputStream} from the given supplier, and read it into a
+	 * Obtain an {@link InputStream} from the given supplier, and read it into a
 	 * {@code Flux} of {@code DataBuffer}s. Closes the input stream when the
 	 * Flux is terminated.
 	 * @param inputStreamSupplier the supplier for the input stream to read from
@@ -125,7 +126,7 @@ public abstract class DataBufferUtils {
 	}
 
 	/**
-	 * Obtain a {@code AsynchronousFileChannel} from the given supplier, and
+	 * Obtain an {@code AsynchronousFileChannel} from the given supplier, and
 	 * read it into a {@code Flux} of {@code DataBuffer}s, starting at the given
 	 * position. Closes the channel when the Flux is terminated.
 	 * @param channelSupplier the supplier for the channel to read from
@@ -176,7 +177,7 @@ public abstract class DataBufferUtils {
 		if (options.length > 0) {
 			for (OpenOption option : options) {
 				Assert.isTrue(!(option == StandardOpenOption.APPEND || option == StandardOpenOption.WRITE),
-						"'" + option + "' not allowed");
+						() -> "'" + option + "' not allowed");
 			}
 		}
 
@@ -365,7 +366,8 @@ public abstract class DataBufferUtils {
 				sink.onDispose(() -> closeChannel(channel));
 				write(source, channel).subscribe(DataBufferUtils::release,
 						sink::error,
-						sink::success);
+						sink::success,
+						Context.of(sink.contextView()));
 			}
 			catch (IOException ex) {
 				sink.error(ex);
@@ -488,6 +490,24 @@ public abstract class DataBufferUtils {
 	}
 
 	/**
+	 * Associate the given hint with the data buffer if it is a pooled buffer
+	 * and supports leak tracking.
+	 * @param dataBuffer the data buffer to attach the hint to
+	 * @param hint the hint to attach
+	 * @return the input buffer
+	 * @since 5.3.2
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends DataBuffer> T touch(T dataBuffer, Object hint) {
+		if (dataBuffer instanceof PooledDataBuffer) {
+			return (T) ((PooledDataBuffer) dataBuffer).touch(hint);
+		}
+		else {
+			return dataBuffer;
+		}
+	}
+
+	/**
 	 * Release the given data buffer, if it is a {@link PooledDataBuffer} and
 	 * has been {@linkplain PooledDataBuffer#isAllocated() allocated}.
 	 * @param dataBuffer the data buffer to release
@@ -521,7 +541,7 @@ public abstract class DataBufferUtils {
 	}
 
 	/**
-	 * Return a new {@code DataBuffer} composed from joining together the given
+	 * Return a new {@code DataBuffer} composed of joining together the given
 	 * {@code dataBuffers} elements. Depending on the {@link DataBuffer} type,
 	 * the returned buffer may be a single buffer containing all data of the
 	 * provided buffers, or it may be a zero-copy, composite with references to
@@ -532,7 +552,7 @@ public abstract class DataBufferUtils {
 	 * <p>Note that the given data buffers do <strong>not</strong> have to be
 	 * released. They will be released as part of the returned composite.
 	 * @param dataBuffers the data buffers that are to be composed
-	 * @return a buffer that is composed from the {@code dataBuffers} argument
+	 * @return a buffer that is composed of the {@code dataBuffers} argument
 	 * @since 5.0.3
 	 */
 	public static Mono<DataBuffer> join(Publisher<? extends DataBuffer> dataBuffers) {
@@ -675,7 +695,7 @@ public abstract class DataBufferUtils {
 
 		@Override
 		public byte[] delimiter() {
-			Assert.state(this.longestDelimiter != NO_DELIMITER, "Illegal state!");
+			Assert.state(this.longestDelimiter != NO_DELIMITER, "'delimiter' not set");
 			return this.longestDelimiter;
 		}
 
@@ -1039,6 +1059,12 @@ public abstract class DataBufferUtils {
 		protected void hookOnComplete() {
 			this.sink.complete();
 		}
+
+		@Override
+		public Context currentContext() {
+			return Context.of(this.sink.contextView());
+		}
+
 	}
 
 
@@ -1130,6 +1156,12 @@ public abstract class DataBufferUtils {
 			this.sink.next(dataBuffer);
 			this.dataBuffer.set(null);
 		}
+
+		@Override
+		public Context currentContext() {
+			return Context.of(this.sink.contextView());
+		}
+
 	}
 
 }

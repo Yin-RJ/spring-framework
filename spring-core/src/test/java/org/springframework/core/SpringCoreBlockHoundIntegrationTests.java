@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.core;
 
 import java.lang.reflect.Method;
@@ -42,11 +43,10 @@ import static org.junit.jupiter.api.condition.JRE.JAVA_14;
 @DisabledForJreRange(min = JAVA_14)
 public class SpringCoreBlockHoundIntegrationTests {
 
-
 	@BeforeAll
-	static void setUp() {
+	static void setup() {
 		BlockHound.builder()
-				.with(new ReactorBlockHoundIntegration()) // Reactor non-blocking thread predicate
+				.with(new ReactorBlockHoundIntegration())  // Reactor non-blocking thread predicate
 				.with(new ReactiveAdapterRegistry.SpringCoreBlockHoundIntegration())
 				.install();
 	}

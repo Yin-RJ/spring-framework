@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompSession.Subscription;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
-import org.springframework.util.SocketUtils;
 import org.springframework.util.concurrent.ListenableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,10 +57,11 @@ public class ReactorNettyTcpStompClientTests {
 
 
 	@BeforeEach
-	public void setUp(TestInfo testInfo) throws Exception {
+	public void setup(TestInfo testInfo) throws Exception {
 		logger.debug("Setting up before '" + testInfo.getTestMethod().get().getName() + "'");
 
-		int port = SocketUtils.findAvailableTcpPort(61613);
+		@SuppressWarnings("deprecation")
+		int port = org.springframework.util.SocketUtils.findAvailableTcpPort(61613);
 
 		this.activeMQBroker = new BrokerService();
 		this.activeMQBroker.addConnector("stomp://127.0.0.1:" + port);
@@ -81,7 +81,7 @@ public class ReactorNettyTcpStompClientTests {
 	}
 
 	@AfterEach
-	public void tearDown() throws Exception {
+	public void shutdown() throws Exception {
 		try {
 			this.client.shutdown();
 		}

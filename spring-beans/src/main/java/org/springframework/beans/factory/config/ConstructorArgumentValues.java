@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ public class ConstructorArgumentValues {
 
 	/**
 	 * Copy all given argument values into this object, using separate holder
-	 * instances to keep the values independent from the original object.
+	 * instances to keep the values independent of the original object.
 	 * <p>Note: Identical ValueHolder instances will only be registered once,
 	 * to allow for merging and re-merging of argument value definitions. Distinct
 	 * ValueHolder instances carrying the same content are of course allowed.
@@ -351,7 +351,9 @@ public class ConstructorArgumentValues {
 	 * @return the ValueHolder for the argument, or {@code null} if none set
 	 */
 	@Nullable
-	public ValueHolder getArgumentValue(int index, @Nullable Class<?> requiredType, @Nullable String requiredName, @Nullable Set<ValueHolder> usedValueHolders) {
+	public ValueHolder getArgumentValue(int index, @Nullable Class<?> requiredType,
+			@Nullable String requiredName, @Nullable Set<ValueHolder> usedValueHolders) {
+
 		Assert.isTrue(index >= 0, "Index must not be negative");
 		ValueHolder valueHolder = getIndexedArgumentValue(index, requiredType, requiredName);
 		if (valueHolder == null) {

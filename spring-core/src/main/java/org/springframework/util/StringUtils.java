@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,8 @@ public abstract class StringUtils {
 	private static final String[] EMPTY_STRING_ARRAY = {};
 
 	private static final String FOLDER_SEPARATOR = "/";
+
+	private static final char FOLDER_SEPARATOR_CHAR = '/';
 
 	private static final String WINDOWS_FOLDER_SEPARATOR = "\\";
 
@@ -239,26 +241,43 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Trim <i>all</i> whitespace from the given {@code String}:
+	 * Trim <em>all</em> whitespace from the given {@code CharSequence}:
 	 * leading, trailing, and in between characters.
-	 * @param str the {@code String} to check
-	 * @return the trimmed {@code String}
+	 * @param text the {@code CharSequence} to check
+	 * @return the trimmed {@code CharSequence}
+	 * @since 5.3.22
+	 * @see #trimAllWhitespace(String)
 	 * @see java.lang.Character#isWhitespace
 	 */
-	public static String trimAllWhitespace(String str) {
-		if (!hasLength(str)) {
-			return str;
+	public static CharSequence trimAllWhitespace(CharSequence text) {
+		if (!hasLength(text)) {
+			return text;
 		}
 
-		int len = str.length();
-		StringBuilder sb = new StringBuilder(str.length());
+		int len = text.length();
+		StringBuilder sb = new StringBuilder(text.length());
 		for (int i = 0; i < len; i++) {
-			char c = str.charAt(i);
+			char c = text.charAt(i);
 			if (!Character.isWhitespace(c)) {
 				sb.append(c);
 			}
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * Trim <em>all</em> whitespace from the given {@code String}:
+	 * leading, trailing, and in between characters.
+	 * @param str the {@code String} to check
+	 * @return the trimmed {@code String}
+	 * @see #trimAllWhitespace(CharSequence)
+	 * @see java.lang.Character#isWhitespace
+	 */
+	public static String trimAllWhitespace(String str) {
+		if (str == null) {
+			return null;
+		}
+		return trimAllWhitespace((CharSequence) str).toString();
 	}
 
 	/**
@@ -566,12 +585,12 @@ public abstract class StringUtils {
 
 		char[] chars = str.toCharArray();
 		chars[0] = updatedChar;
-		return new String(chars, 0, chars.length);
+		return new String(chars);
 	}
 
 	/**
 	 * Extract the filename from the given Java resource path,
-	 * e.g. {@code "mypath/myfile.txt" -> "myfile.txt"}.
+	 * e.g. {@code "mypath/myfile.txt" &rarr; "myfile.txt"}.
 	 * @param path the file path (may be {@code null})
 	 * @return the extracted filename, or {@code null} if none
 	 */
@@ -581,13 +600,13 @@ public abstract class StringUtils {
 			return null;
 		}
 
-		int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR);
+		int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR_CHAR);
 		return (separatorIndex != -1 ? path.substring(separatorIndex + 1) : path);
 	}
 
 	/**
 	 * Extract the filename extension from the given Java resource path,
-	 * e.g. "mypath/myfile.txt" -> "txt".
+	 * e.g. "mypath/myfile.txt" &rarr; "txt".
 	 * @param path the file path (may be {@code null})
 	 * @return the extracted filename extension, or {@code null} if none
 	 */
@@ -602,7 +621,7 @@ public abstract class StringUtils {
 			return null;
 		}
 
-		int folderIndex = path.lastIndexOf(FOLDER_SEPARATOR);
+		int folderIndex = path.lastIndexOf(FOLDER_SEPARATOR_CHAR);
 		if (folderIndex > extIndex) {
 			return null;
 		}
@@ -612,7 +631,7 @@ public abstract class StringUtils {
 
 	/**
 	 * Strip the filename extension from the given Java resource path,
-	 * e.g. "mypath/myfile.txt" -> "mypath/myfile".
+	 * e.g. "mypath/myfile.txt" &rarr; "mypath/myfile".
 	 * @param path the file path
 	 * @return the path with stripped filename extension
 	 */
@@ -622,7 +641,7 @@ public abstract class StringUtils {
 			return path;
 		}
 
-		int folderIndex = path.lastIndexOf(FOLDER_SEPARATOR);
+		int folderIndex = path.lastIndexOf(FOLDER_SEPARATOR_CHAR);
 		if (folderIndex > extIndex) {
 			return path;
 		}
@@ -639,11 +658,11 @@ public abstract class StringUtils {
 	 * @return the full file path that results from applying the relative path
 	 */
 	public static String applyRelativePath(String path, String relativePath) {
-		int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR);
+		int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR_CHAR);
 		if (separatorIndex != -1) {
 			String newPath = path.substring(0, separatorIndex);
 			if (!relativePath.startsWith(FOLDER_SEPARATOR)) {
-				newPath += FOLDER_SEPARATOR;
+				newPath += FOLDER_SEPARATOR_CHAR;
 			}
 			return newPath + relativePath;
 		}
@@ -667,7 +686,9 @@ public abstract class StringUtils {
 		if (!hasLength(path)) {
 			return path;
 		}
-		String pathToUse = replace(path, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR);
+
+		String normalizedPath = replace(path, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR);
+		String pathToUse = normalizedPath;
 
 		// Shortcut if there is no work to do
 		if (pathToUse.indexOf('.') == -1) {
@@ -695,7 +716,8 @@ public abstract class StringUtils {
 		}
 
 		String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR);
-		Deque<String> pathElements = new ArrayDeque<>();
+		// we never require more elements than pathArray and in the common case the same number
+		Deque<String> pathElements = new ArrayDeque<>(pathArray.length);
 		int tops = 0;
 
 		for (int i = pathArray.length - 1; i >= 0; i--) {
@@ -721,7 +743,7 @@ public abstract class StringUtils {
 
 		// All path elements stayed the same - shortcut
 		if (pathArray.length == pathElements.size()) {
-			return prefix + pathToUse;
+			return normalizedPath;
 		}
 		// Remaining top paths need to be retained.
 		for (int i = 0; i < tops; i++) {
@@ -732,7 +754,9 @@ public abstract class StringUtils {
 			pathElements.addFirst(CURRENT_PATH);
 		}
 
-		return prefix + collectionToDelimitedString(pathElements, FOLDER_SEPARATOR);
+		final String joined = collectionToDelimitedString(pathElements, FOLDER_SEPARATOR);
+		// avoid string concatenation with empty prefix
+		return prefix.isEmpty() ? joined : prefix + joined;
 	}
 
 	/**
@@ -797,11 +821,11 @@ public abstract class StringUtils {
 
 	/**
 	 * Parse the given {@code String} value into a {@link Locale}, accepting
-	 * the {@link Locale#toString} format as well as BCP 47 language tags.
+	 * the {@link Locale#toString} format as well as BCP 47 language tags as
+	 * specified by {@link Locale#forLanguageTag}.
 	 * @param localeValue the locale value: following either {@code Locale's}
 	 * {@code toString()} format ("en", "en_UK", etc), also accepting spaces as
 	 * separators (as an alternative to underscores), or BCP 47 (e.g. "en-UK")
-	 * as specified by {@link Locale#forLanguageTag} on Java 7+
 	 * @return a corresponding {@code Locale} instance, or {@code null} if none
 	 * @throws IllegalArgumentException in case of an invalid locale specification
 	 * @since 5.0.4
@@ -1197,7 +1221,7 @@ public abstract class StringUtils {
 	 * {@code String} array.
 	 * <p>A single {@code delimiter} may consist of more than one character,
 	 * but it will still be considered as a single delimiter string, rather
-	 * than as bunch of potential delimiter characters, in contrast to
+	 * than as a bunch of potential delimiter characters, in contrast to
 	 * {@link #tokenizeToStringArray}.
 	 * @param str the input {@code String} (potentially {@code null} or empty)
 	 * @param delimiter the delimiter between elements (this is a single delimiter,
@@ -1214,7 +1238,7 @@ public abstract class StringUtils {
 	 * a {@code String} array.
 	 * <p>A single {@code delimiter} may consist of more than one character,
 	 * but it will still be considered as a single delimiter string, rather
-	 * than as bunch of potential delimiter characters, in contrast to
+	 * than as a bunch of potential delimiter characters, in contrast to
 	 * {@link #tokenizeToStringArray}.
 	 * @param str the input {@code String} (potentially {@code null} or empty)
 	 * @param delimiter the delimiter between elements (this is a single delimiter,
@@ -1294,7 +1318,12 @@ public abstract class StringUtils {
 			return "";
 		}
 
-		StringBuilder sb = new StringBuilder();
+		int totalLength = coll.size() * (prefix.length() + suffix.length()) + (coll.size() - 1) * delim.length();
+		for (Object element : coll) {
+			totalLength += String.valueOf(element).length();
+		}
+
+		StringBuilder sb = new StringBuilder(totalLength);
 		Iterator<?> it = coll.iterator();
 		while (it.hasNext()) {
 			sb.append(prefix).append(it.next()).append(suffix);
@@ -1342,8 +1371,8 @@ public abstract class StringUtils {
 		}
 
 		StringJoiner sj = new StringJoiner(delim);
-		for (Object o : arr) {
-			sj.add(String.valueOf(o));
+		for (Object elem : arr) {
+			sj.add(String.valueOf(elem));
 		}
 		return sj.toString();
 	}

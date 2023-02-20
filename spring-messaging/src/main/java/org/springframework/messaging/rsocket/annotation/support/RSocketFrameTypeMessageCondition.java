@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.messaging.rsocket.annotation.support;
 
 import java.util.Arrays;
@@ -131,7 +132,6 @@ public class RSocketFrameTypeMessageCondition extends AbstractMessageCondition<R
 	 * @param message the current message
 	 * @return the frame type or {@code null} if not found
 	 */
-	@SuppressWarnings("ConstantConditions")
 	@Nullable
 	public static FrameType getFrameType(Message<?> message) {
 		return (FrameType) message.getHeaders().get(RSocketFrameTypeMessageCondition.FRAME_TYPE_HEADER);
@@ -169,7 +169,7 @@ public class RSocketFrameTypeMessageCondition extends AbstractMessageCondition<R
 
 	/**
 	 * Return a condition for matching the RSocket request interaction type with
-	 * that is selected based on the delcared request and response cardinality
+	 * that is selected based on the declared request and response cardinality
 	 * of some handler method.
 	 * <p>The table below shows the selections made:
 	 * <table>

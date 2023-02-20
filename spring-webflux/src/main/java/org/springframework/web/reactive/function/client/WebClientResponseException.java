@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.web.reactive.function.client;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
@@ -43,10 +45,11 @@ public class WebClientResponseException extends WebClientException {
 
 	private final HttpHeaders headers;
 
+	@Nullable
 	private final Charset responseCharset;
 
 	@Nullable
-	private final HttpRequest request;
+	private transient final HttpRequest request;
 
 
 	/**
@@ -95,10 +98,29 @@ public class WebClientResponseException extends WebClientException {
 
 		this.statusCode = statusCode;
 		this.statusText = statusText;
-		this.headers = (headers != null ? headers : HttpHeaders.EMPTY);
+		this.headers = copy(headers);
 		this.responseBody = (responseBody != null ? responseBody : new byte[0]);
-		this.responseCharset = (charset != null ? charset : StandardCharsets.ISO_8859_1);
+		this.responseCharset = charset;
 		this.request = request;
+	}
+
+	/**
+	 * Not all {@code HttpHeaders} implementations are serializable, so we
+	 * make a copy to ensure that {@code WebClientResponseException} is.
+	 */
+	private static HttpHeaders copy(@Nullable HttpHeaders headers) {
+		if (headers == null) {
+			return HttpHeaders.EMPTY;
+		}
+		else {
+			HttpHeaders result = new HttpHeaders();
+			for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+				for (String value : entry.getValue()) {
+					result.add(entry.getKey(), value);
+				}
+			}
+			return result;
+		}
 	}
 
 
@@ -139,10 +161,26 @@ public class WebClientResponseException extends WebClientException {
 	}
 
 	/**
-	 * Return the response body as a string.
+	 * Return the response content as a String using the charset of media type
+	 * for the response, if available, or otherwise falling back on
+	 * {@literal ISO-8859-1}. Use {@link #getResponseBodyAsString(Charset)} if
+	 * you want to fall back on a different, default charset.
 	 */
 	public String getResponseBodyAsString() {
-		return new String(this.responseBody, this.responseCharset);
+		return getResponseBodyAsString(StandardCharsets.ISO_8859_1);
+	}
+
+	/**
+	 * Variant of {@link #getResponseBodyAsString()} that allows specifying the
+	 * charset to fall back on, if a charset is not available from the media
+	 * type for the response.
+	 * @param defaultCharset the charset to use if the {@literal Content-Type}
+	 * of the response does not specify one.
+	 * @since 5.3.7
+	 */
+	public String getResponseBodyAsString(Charset defaultCharset) {
+		return new String(this.responseBody,
+				(this.responseCharset != null ? this.responseCharset : defaultCharset));
 	}
 
 	/**
@@ -397,7 +435,7 @@ public class WebClientResponseException extends WebClientException {
 	}
 
 	/**
-	 * {@link WebClientResponseException} for status HTTP HTTP 502 Bad Gateway.
+	 * {@link WebClientResponseException} for HTTP status 502 Bad Gateway.
 	 * @since 5.1
 	 */
 	@SuppressWarnings("serial")

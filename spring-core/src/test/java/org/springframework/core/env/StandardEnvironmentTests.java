@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -212,7 +212,7 @@ public class StandardEnvironmentTests {
 	void defaultProfileWithCircularPlaceholder() {
 		try {
 			System.setProperty(DEFAULT_PROFILES_PROPERTY_NAME, "${spring.profiles.default}");
-			assertThatIllegalArgumentException().isThrownBy(() -> environment.getDefaultProfiles());
+			assertThatIllegalArgumentException().isThrownBy(environment::getDefaultProfiles);
 		}
 		finally {
 			System.clearProperty(DEFAULT_PROFILES_PROPERTY_NAME);
@@ -242,7 +242,7 @@ public class StandardEnvironmentTests {
 	}
 
 	@Test
-	void getActiveProfiles_fromSystemProperties_withMulitpleProfiles_withWhitespace() {
+	void getActiveProfiles_fromSystemProperties_withMultipleProfiles_withWhitespace() {
 		System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, " bar , baz "); // notice whitespace
 		assertThat(environment.getActiveProfiles()).contains("bar", "baz");
 		System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);

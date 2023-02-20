@@ -21,6 +21,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
@@ -131,7 +133,7 @@ public abstract class Hints {
 	 * Merge a single hint into a map of hints, possibly creating and copying
 	 * all hints into a new map, or otherwise if the map of hints is empty,
 	 * creating a new single entry map.
-	 * @param hints a map of hints to be merge
+	 * @param hints a map of hints to be merged
 	 * @param hintName the hint name to merge
 	 * @param hintValue the hint value to merge
 	 * @return a single map with all hints
@@ -145,6 +147,24 @@ public abstract class Hints {
 			result.putAll(hints);
 			result.put(hintName, hintValue);
 			return result;
+		}
+	}
+
+	/**
+	 * If the hints contain a {@link #LOG_PREFIX_HINT} and the given logger has
+	 * DEBUG level enabled, apply the log prefix as a hint to the given buffer
+	 * via {@link DataBufferUtils#touch(DataBuffer, Object)}.
+	 * @param buffer the buffer to touch
+	 * @param hints the hints map to check for a log prefix
+	 * @param logger the logger whose level to check
+	 * @since 5.3.2
+	 */
+	public static void touchDataBuffer(DataBuffer buffer, @Nullable Map<String, Object> hints, Log logger) {
+		if (logger.isDebugEnabled() && hints != null) {
+			Object logPrefix = hints.get(LOG_PREFIX_HINT);
+			if (logPrefix != null) {
+				DataBufferUtils.touch(buffer, logPrefix);
+			}
 		}
 	}
 

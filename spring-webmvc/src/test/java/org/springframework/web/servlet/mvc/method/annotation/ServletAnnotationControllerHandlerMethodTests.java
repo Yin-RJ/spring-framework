@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,6 @@ import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
@@ -961,7 +960,9 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 	void unsupportedRequestBody(boolean usePathPatterns) throws Exception {
 		initDispatcherServlet(RequestResponseBodyController.class, usePathPatterns, wac -> {
 			RootBeanDefinition adapterDef = new RootBeanDefinition(RequestMappingHandlerAdapter.class);
-			adapterDef.getPropertyValues().add("messageConverters", new ByteArrayHttpMessageConverter());
+			StringHttpMessageConverter converter = new StringHttpMessageConverter();
+			converter.setSupportedMediaTypes(Collections.singletonList(MediaType.TEXT_PLAIN));
+			adapterDef.getPropertyValues().add("messageConverters", converter);
 			wac.registerBeanDefinition("handlerAdapter", adapterDef);
 		});
 
@@ -972,7 +973,27 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 		MockHttpServletResponse response = new MockHttpServletResponse();
 		getServlet().service(request, response);
 		assertThat(response.getStatus()).isEqualTo(415);
-		assertThat(response.getHeader("Accept")).as("No Accept response header set").isNotNull();
+		assertThat(response.getHeader("Accept")).isEqualTo("text/plain");
+	}
+
+	@PathPatternsParameterizedTest
+	void unsupportedPatchBody(boolean usePathPatterns) throws Exception {
+		initDispatcherServlet(RequestResponseBodyController.class, usePathPatterns, wac -> {
+			RootBeanDefinition adapterDef = new RootBeanDefinition(RequestMappingHandlerAdapter.class);
+			StringHttpMessageConverter converter = new StringHttpMessageConverter();
+			converter.setSupportedMediaTypes(Collections.singletonList(MediaType.TEXT_PLAIN));
+			adapterDef.getPropertyValues().add("messageConverters", converter);
+			wac.registerBeanDefinition("handlerAdapter", adapterDef);
+		});
+
+		MockHttpServletRequest request = new MockHttpServletRequest("PATCH", "/something");
+		String requestBody = "Hello World";
+		request.setContent(requestBody.getBytes(StandardCharsets.UTF_8));
+		request.addHeader("Content-Type", "application/pdf");
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		getServlet().service(request, response);
+		assertThat(response.getStatus()).isEqualTo(415);
+		assertThat(response.getHeader("Accept-Patch")).isEqualTo("text/plain");
 	}
 
 	@PathPatternsParameterizedTest
@@ -1732,6 +1753,7 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 	}
 
 	@PathPatternsParameterizedTest
+	@SuppressWarnings("deprecation")
 	void responseBodyAsHtml(boolean usePathPatterns) throws Exception {
 		initDispatcherServlet(TextRestController.class, usePathPatterns, wac -> {
 			if (!usePathPatterns) {
@@ -1771,6 +1793,7 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 	}
 
 	@PathPatternsParameterizedTest
+	@SuppressWarnings("deprecation")
 	void responseBodyAsHtmlWithSuffixPresent(boolean usePathPatterns) throws Exception {
 		initDispatcherServlet(TextRestController.class, usePathPatterns, wac -> {
 			ContentNegotiationManagerFactoryBean factoryBean = new ContentNegotiationManagerFactoryBean();
@@ -1874,6 +1897,18 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 		assertThat(response.getForwardedUrl()).isEqualTo("view");
 	}
 
+	@PathPatternsParameterizedTest
+	void modelAndViewWithStatusForRedirect(boolean usePathPatterns) throws Exception {
+		initDispatcherServlet(ModelAndViewController.class, usePathPatterns);
+
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/redirect");
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		getServlet().service(request, response);
+
+		assertThat(response.getStatus()).isEqualTo(307);
+		assertThat(response.getRedirectedUrl()).isEqualTo("/path");
+	}
+
 	@PathPatternsParameterizedTest // SPR-14796
 	void modelAndViewWithStatusInExceptionHandler(boolean usePathPatterns) throws Exception {
 		initDispatcherServlet(ModelAndViewController.class, usePathPatterns);
@@ -1975,9 +2010,8 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 	void dataClassBindingWithServletPart(boolean usePathPatterns) throws Exception {
 		initDispatcherServlet(ServletPartDataClassController.class, usePathPatterns);
 
-		MockHttpServletRequest request = new MockHttpServletRequest();
+		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/bind");
 		request.setContentType("multipart/form-data");
-		request.setRequestURI("/bind");
 		request.addPart(new MockPart("param1", "value1".getBytes(StandardCharsets.UTF_8)));
 		request.addParameter("param2", "true");
 		MockHttpServletResponse response = new MockHttpServletResponse();
@@ -2201,6 +2235,7 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 		assertThat(response.getStatus()).isEqualTo(200);
 		assertThat(response.getContentAsString()).isEqualTo("foo-body");
 	}
+
 
 	@Controller
 	static class ControllerWithEmptyValueMapping {
@@ -3539,7 +3574,6 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 			assertThat(headers.getContentType()).as("Invalid Content-Type").isEqualTo(new MediaType("text", "html"));
 			multiValueMap(headers, writer);
 		}
-
 	}
 
 	@Controller
@@ -3848,6 +3882,11 @@ public class ServletAnnotationControllerHandlerMethodTests extends AbstractServl
 		@RequestMapping("/path")
 		public ModelAndView methodWithHttpStatus(MyEntity object) {
 			return new ModelAndView("view", HttpStatus.UNPROCESSABLE_ENTITY);
+		}
+
+		@RequestMapping("/redirect")
+		public ModelAndView methodWithHttpStatusForRedirect(MyEntity object) {
+			return new ModelAndView("redirect:/path", HttpStatus.TEMPORARY_REDIRECT);
 		}
 
 		@RequestMapping("/exception")
