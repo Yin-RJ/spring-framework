@@ -1,0 +1,7 @@
+description = "Spring Beans test"
+
+apply plugin: 'java'
+
+dependencies {
+    compile project(":spring-beans")
+}
